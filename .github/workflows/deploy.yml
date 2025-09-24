@@ -30,8 +30,15 @@ jobs:
 
       - name: Unlock Terraform state (if needed)
         working-directory: infra
-        run: terraform force-unlock -force $(date +%s) || true
-        continue-on-error: true
+        run: |
+          LOCK_INFO=$(terraform plan 2>&1 || true)
+          if echo "$LOCK_INFO" | grep -q "Lock Info"; then
+            LOCK_ID=$(echo "$LOCK_INFO" | grep "ID:" | awk '{print $2}')
+            echo "Found lock ID: $LOCK_ID"
+            terraform force-unlock -force $LOCK_ID || true
+          else
+            echo "No active lock found, moving on."
+          fi
 
       - name: Terraform Plan
         working-directory: infra
@@ -77,11 +84,10 @@ jobs:
 
       - name: Build & Tag Docker Image
         run: |
-          TIMESTAMP=$(date +%Y%m%d%H%M%S)
           VERSION=$(az acr repository show-tags \
             --name chatbotacr2025 \
             --repository chatbot-service \
-            --query "[-1]" -o tsv || echo "1")
+            --query "[-1]" -o tsv || echo "")
 
           if [ -z "$VERSION" ]; then
             VERSION=1
@@ -91,12 +97,10 @@ jobs:
 
           IMAGE=${{ steps.acr.outputs.login_server }}/chatbot-service:$VERSION
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
           docker build -t $IMAGE ./app
           docker push $IMAGE
-
-      - name: Export image version
-        run: echo "IMAGE_VERSION=$IMAGE" >> $GITHUB_ENV
 
   helm_deploy:
     runs-on: ubuntu-latest
@@ -145,5 +149,5 @@ jobs:
         run: |
           helm upgrade --install chatbot ./helm/chatbot \
             --namespace chatbot --create-namespace \
-            --set image.repository=${{ steps.build_push.outputs.IMAGE_VERSION }} \
-            --set image.tag=latest
+            --set image.repository=${{ steps.build_push.outputs.IMAGE }} \
+            --set image.tag=${{ env.VERSION }}
