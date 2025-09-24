@@ -24,27 +24,20 @@ resource "azurerm_user_assigned_identity" "workload_identity" {
   }
 }
 
-# -----------------------------
-# Data sources
-# -----------------------------
+
 # Reference your existing ACR
 data "azurerm_container_registry" "chatbot_acr" {
   name                = "acrcandidates"
-  resource_group_name = var.resource_group_name
-}
-
-# Reference AKS after creation (to fetch kubelet identity cleanly)
-data "azurerm_kubernetes_cluster" "chatbot_aks" {
-  name                = azurerm_kubernetes_cluster.chatbot_aks.name
-  resource_group_name = var.resource_group_name
-  depends_on          = [azurerm_kubernetes_cluster.chatbot_aks]
+  resource_group_name = "ai-candidates"
 }
 
 # -----------------------------
-# ACR Pull Role Assignment for AKS kubelet identity
+# (TEMPORARILY REMOVE)
+# ACR Pull Role Assignment
 # -----------------------------
-resource "azurerm_role_assignment" "aks_acr_pull" {
-  principal_id         = data.azurerm_kubernetes_cluster.chatbot_aks.kubelet_identity[0].object_id
-  role_definition_name = "AcrPull"
-  scope                = data.azurerm_container_registry.chatbot_acr.id
-}
+# 🚨 Commented out to break cycles
+# resource "azurerm_role_assignment" "aks_acr_pull" {
+#   principal_id         = data.azurerm_kubernetes_cluster.chatbot_aks.kubelet_identity[0].object_id
+#   role_definition_name = "AcrPull"
+#   scope                = data.azurerm_container_registry.chatbot_acr.id
+# }

@@ -21,7 +21,7 @@ resource "azurerm_kubernetes_cluster" "chatbot_aks" {
   }
 
   # Wire AKS to ACR
-  depends_on = [azurerm_role_assignment.aks_acr_pull]
+  #depends_on = [azurerm_role_assignment.aks_acr_pull]
 
   network_profile {
     network_plugin     = "azure"
