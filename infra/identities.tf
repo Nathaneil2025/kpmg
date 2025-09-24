@@ -25,11 +25,11 @@ resource "azurerm_user_assigned_identity" "workload_identity" {
 }
 
 # -----------------------------
-# Reference existing ACR
+# Reference the existing ACR "myacr2025kpm" in RG "platform_candidate_2"
 # -----------------------------
 data "azurerm_container_registry" "chatbot_acr" {
-  name                = "myacr2025kpm"          # ✅ updated ACR name
-  resource_group_name = "platform_candidate_2"  # ✅ updated resource group
+  name                = "myacr2025kpm"
+  resource_group_name = "platform_candidate_2"
 }
 
 # -----------------------------
@@ -39,4 +39,13 @@ resource "azurerm_role_assignment" "aks_acr_pull" {
   principal_id         = azurerm_kubernetes_cluster.chatbot_aks.kubelet_identity[0].object_id
   role_definition_name = "AcrPull"
   scope                = data.azurerm_container_registry.chatbot_acr.id
+}
+
+# -----------------------------
+# Role Assignment: allow your human admin user to be AKS Cluster Admin
+# -----------------------------
+resource "azurerm_role_assignment" "human_cluster_admin" {
+  principal_id         = "86cc998c-7920-4c2e-9daa-bc835f61f5da" # your real Entra ID Object ID
+  role_definition_name = "Azure Kubernetes Service RBAC Cluster Admin"
+  scope                = "/subscriptions/${var.subscription_id}/resourceGroups/${var.resource_group_name}"
 }
