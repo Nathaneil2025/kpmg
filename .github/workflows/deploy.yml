@@ -28,7 +28,7 @@ jobs:
         working-directory: infra
         run: terraform init
 
-      - name: Unlock Terraform state (if needed)
+      
         working-directory: infra
         run: |
           LOCK_INFO=$(terraform plan 2>&1 || true)
