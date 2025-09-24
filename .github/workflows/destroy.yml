@@ -27,26 +27,17 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      # ----------------------
-      # AKS Kubeconfig Export
-      # ----------------------
       - name: Get AKS Credentials
         run: |
           az aks get-credentials -g $RESOURCE_GROUP -n $CLUSTER_NAME --overwrite-existing
         continue-on-error: true
 
-      # ----------------------
-      # Helm Cleanup
-      # ----------------------
       - name: Uninstall Helm Releases
         run: |
           helm uninstall chatbot -n chatbot || true
           helm uninstall agic -n kube-system || true
         continue-on-error: true
 
-      # ----------------------
-      # Scale Down Node Pools
-      # ----------------------
       - name: Scale down node pool
         run: |
           az aks nodepool scale \
@@ -56,9 +47,6 @@ jobs:
             --node-count 0 || true
         continue-on-error: true
 
-      # ----------------------
-      # Terraform Destroy (Infra)
-      # ----------------------
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -66,7 +54,6 @@ jobs:
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform init
 
-      # ✅ Safe lock detection + unlock (same as deploy)
       - name: Detect & force-unlock Terraform state if locked
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
@@ -110,3 +97,6 @@ jobs:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          TF_VAR_github_oidc_principal_id: ${{ secrets.AZURE_CLIENT_OBJECT_ID }}
