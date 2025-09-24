@@ -19,3 +19,8 @@ variable "resource_group_name" {
   type        = string
   default     = "platform_candidate_2"
 }
+
+variable "github_oidc_principal_id" {
+  description = "The object ID of the GitHub OIDC App Registration in Azure AD"
+  type        = string
+}

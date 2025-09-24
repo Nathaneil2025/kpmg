@@ -1,4 +1,4 @@
-name: Destroy Chatbot Infra + App new
+name: Destroy Chatbot Infra + App
 
 on:
   workflow_dispatch:   # ✅ manual trigger only
@@ -66,11 +66,34 @@ jobs:
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform init
 
-      - name: Terraform Force Unlock (safety)
+      - name: Detect & Force Unlock if Locked
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: terraform force-unlock -force $(date +%s) || true
-        continue-on-error: true
+        run: |
+          echo "Checking if Terraform state is locked…"
+          terraform plan -lock-timeout=0 > plan.out 2>&1 || true
+
+          if grep -q "Error acquiring the state lock" plan.out; then
+            echo "State locked. Extracting lock ID…"
+            sed 's/│//g' plan.out > plan.clean
+            LOCK_ID=$(awk '/ID:/ {print $2; exit}' plan.clean)
+
+            if [ -n "$LOCK_ID" ]; then
+              echo "Unlocking with ID: $LOCK_ID"
+              terraform force-unlock -force "$LOCK_ID" || true
+            else
+              echo "❌ Failed to parse lock ID"
+              sed -n '/Lock Info:/,/^$/p' plan.clean || true
+            fi
+          else
+            echo "✅ No active lock found."
+          fi
 
       - name: Terraform Destroy
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform destroy -auto-approve
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
