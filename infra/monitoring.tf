@@ -18,21 +18,17 @@ resource "azurerm_log_analytics_workspace" "chatbot_logs" {
 # -----------------------------------------
 
 # AKS diagnostics
-resource "azurerm_monitor_diagnostic_setting" "aks_diagnostics" {
-  name                       = "aks-diagnostics"
-  target_resource_id         = azurerm_kubernetes_cluster.chatbot_aks.id
+resource "azurerm_monitor_diagnostic_setting" "acr_diagnostics" {
+  name                       = "acr-diagnostics"
+  target_resource_id         = data.azurerm_container_registry.chatbot_acr.id
   log_analytics_workspace_id = azurerm_log_analytics_workspace.chatbot_logs.id
 
   enabled_log {
-    category = "kube-apiserver"
+    category = "ContainerRegistryRepositoryEvents"
   }
 
   enabled_log {
-    category = "kube-controller-manager"
-  }
-
-  enabled_log {
-    category = "kube-scheduler"
+    category = "ContainerRegistryLoginEvents"
   }
 
   metric {

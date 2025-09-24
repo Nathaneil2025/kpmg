@@ -22,9 +22,9 @@ resource "azurerm_user_assigned_identity" "workload_identity" {
 
 # Role Assignment: allow AKS identity to pull from ACR
 resource "azurerm_role_assignment" "aks_acr_pull" {
-  principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
+  principal_id         = azurerm_kubernetes_cluster.chatbot_aks.kubelet_identity[0].object_id
   role_definition_name = "AcrPull"
-  scope                = azurerm_container_registry.chatbot_acr.id
+  scope                = data.azurerm_container_registry.chatbot_acr.id
 }
 
 # Role Assignment: allow workload identity to read secrets from Key Vault (will add Key Vault later)
