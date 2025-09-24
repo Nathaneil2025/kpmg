@@ -1,0 +1,73 @@
+# -------------------------
+# Image
+# -------------------------
+image:
+  repository: chatbotacr2025.azurecr.io/chatbot-service   # replaced at runtime in GitHub workflow
+  tag: "1"                                                # workflow will bump version
+  pullPolicy: IfNotPresent
+
+# -------------------------
+# App settings
+# -------------------------
+app:
+  name: chatbot-service
+  replicas: 2
+
+  env:
+    AOAI_ENDPOINT: ""          # injected from Key Vault or GitHub Secret
+    AOAI_DEPLOYMENT: ""        # "
+    AOAI_API_KEY: ""           # "
+    USE_REDIS: "true"
+    REDIS_URL: "rediss://chatbot-redis-2025:6380"
+    USE_COSMOS: "true"
+    COSMOS_FILE: "/data/cosmos_mock.json"   # only fallback; real cosmos wired later
+
+# -------------------------
+# Service
+# -------------------------
+service:
+  type: ClusterIP
+  port: 8080
+
+# -------------------------
+# Ingress (App Gateway Ingress Controller)
+# -------------------------
+ingress:
+  enabled: true
+  className: azure/application-gateway
+  annotations:
+    kubernetes.io/ingress.class: azure/application-gateway
+  hosts:
+    - host: chatbot.kpmg.local   # placeholder; workflow can override with Front Door or custom domain
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []   # leave empty → AGIC can handle cert if we bring one later
+
+# -------------------------
+# Resources
+# -------------------------
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+# -------------------------
+# Liveness / Readiness
+# -------------------------
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 15
+
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 10

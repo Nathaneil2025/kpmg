@@ -1,0 +1,68 @@
+name: Destroy Chatbot Infra + App
+
+on:
+  workflow_dispatch:   # manual trigger only
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    env:
+      TF_WORKING_DIR: infra
+      RESOURCE_GROUP: platform_candidate_2
+      CLUSTER_NAME: chatbot-aks
+      REGION: eastus2
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # ----------------------
+      # AKS Kubeconfig Export
+      # ----------------------
+      - name: Get AKS Credentials
+        run: |
+          az aks get-credentials -g $RESOURCE_GROUP -n $CLUSTER_NAME --overwrite-existing
+
+      # ----------------------
+      # Helm Cleanup
+      # ----------------------
+      - name: Uninstall Helm Releases
+        run: |
+          helm uninstall chatbot -n chatbot || true
+          helm uninstall ingress-azure -n kube-system || true
+
+      # ----------------------
+      # Scale Down Node Pools (prevent stuck deletions)
+      # ----------------------
+      - name: Scale down node pool
+        run: |
+          az aks nodepool scale \
+            --cluster-name $CLUSTER_NAME \
+            --resource-group $RESOURCE_GROUP \
+            --name systempool \
+            --node-count 0 || true
+
+      # ----------------------
+      # Terraform Destroy (Infra)
+      # ----------------------
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init
+
+      - name: Terraform Destroy
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform destroy -auto-approve

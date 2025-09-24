@@ -152,8 +152,7 @@ async def call_aoai_or_mock(messages: List[Dict[str, str]]) -> (str, str, int):
     Returns: (reply, source, tokens_used)
     """
     if AOAI_ENDPOINT and AOAI_DEPLOYMENT and AOAI_API_KEY:
-        # Real call to Azure OpenAI Chat Completions (non-stream)
-        url = f"{AOAI_ENDPOINT}/openai/deployments/{AOAI_DEPLOYMENT}/chat/completions?api-version=2024-02-15-preview"
+        url = f"{AOAI_ENDPOINT}/openai/deployments/{AOAI_DEPLOYMENT}/chat/completions?api-version=2024-05-01-preview"
         headers = {
             "api-key": AOAI_API_KEY,
             "Content-Type": "application/json",
@@ -174,8 +173,8 @@ async def call_aoai_or_mock(messages: List[Dict[str, str]]) -> (str, str, int):
                 return reply, "aoai", tokens
         except Exception as e:
             json_log("aoai_error", error=str(e))
-            # graceful fallback to mock
-    # Mock: concise, business-like English
+            # graceful fallback → keep mock
+    # fallback mock
     last_user = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
     context_hint = "I’m a helpful enterprise chatbot. "
     reply = (
@@ -185,6 +184,7 @@ async def call_aoai_or_mock(messages: List[Dict[str, str]]) -> (str, str, int):
     )
     tokens = max(20, len(last_user) // 3)
     return reply, "mock", tokens
+
 
 # ------------------ Middleware ------------------
 @app.middleware("http")

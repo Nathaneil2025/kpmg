@@ -1,0 +1,77 @@
+name: Deploy Chatbot Infra + App
+
+on:
+  workflow_dispatch:   # manual trigger only
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      TF_WORKING_DIR: infra
+      RESOURCE_GROUP: platform_candidate_2
+      CLUSTER_NAME: chatbot-aks
+      REGION: eastus2
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # ----------------------
+      # Terraform Phase (Infra)
+      # ----------------------
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform apply -auto-approve
+
+      # ----------------------
+      # AKS Kubeconfig Export
+      # ----------------------
+      - name: Get AKS Credentials
+        run: |
+          az aks get-credentials -g $RESOURCE_GROUP -n $CLUSTER_NAME --overwrite-existing
+          kubectl get nodes
+
+      # ----------------------
+      # Install AGIC
+      # ----------------------
+      - name: Install AGIC (Ingress Controller)
+        run: |
+          helm repo add ingress-azure https://appgwingress.blob.core.windows.net/ingress-azure-helm-package/
+          helm repo update
+          helm upgrade --install ingress-azure ingress-azure/ingress-azure \
+            --namespace kube-system \
+            --set appgw.subscriptionId=${{ secrets.AZURE_SUBSCRIPTION_ID }} \
+            --set appgw.resourceGroup=$RESOURCE_GROUP \
+            --set appgw.name=chatbot-appgw \
+            --set armAuth.type=workloadIdentity \
+            --set armAuth.identityClientId=${{ secrets.AZURE_CLIENT_ID }} \
+            --set rbac.enabled=true \
+            --wait
+          kubectl get pods -n kube-system | grep ingress-azure
+
+      # ----------------------
+      # Deploy Chatbot App (Helm)
+      # ----------------------
+      - name: Deploy Chatbot App with Helm
+        run: |
+          helm upgrade --install chatbot ./helm \
+            --namespace chatbot --create-namespace \
+            -f ./helm/values.yaml

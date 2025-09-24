@@ -1,5 +1,5 @@
 # ---------- Build stage ----------
-FROM python:3.11-slim AS builder
+FROM --platform=$BUILDPLATFORM python:3.11-slim AS builder
 
 WORKDIR /app
 
@@ -15,14 +15,16 @@ RUN pip install --upgrade pip \
  && pip install --no-cache-dir "uvicorn[standard]" "gunicorn==22.*"
 
 # ---------- Run stage ----------
-FROM python:3.11-slim
+FROM --platform=$TARGETPLATFORM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PORT=8080 \
     WEB_CONCURRENCY=2 \
     GUNICORN_TIMEOUT=30 \
-    GUNICORN_KEEPALIVE=5
+    GUNICORN_KEEPALIVE=5 \
+    GUNICORN_MAX_REQUESTS=1000 \
+    GUNICORN_MAX_REQUESTS_JITTER=100
 
 # Non-root user
 RUN addgroup --system app && adduser --system --ingroup app app
@@ -43,10 +45,12 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
 
 EXPOSE 8080
 
-# Gunicorn with uvicorn workers; your entrypoint is main.py → app = FastAPI(...)
+# Default command: Gunicorn with Uvicorn workers
 CMD ["sh", "-c", "gunicorn -k uvicorn.workers.UvicornWorker \
   --workers ${WEB_CONCURRENCY} \
   --timeout ${GUNICORN_TIMEOUT} \
   --keep-alive ${GUNICORN_KEEPALIVE} \
+  --max-requests ${GUNICORN_MAX_REQUESTS} \
+  --max-requests-jitter ${GUNICORN_MAX_REQUESTS_JITTER} \
   --bind 0.0.0.0:${PORT} \
   main:app"]

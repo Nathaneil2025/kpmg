@@ -4,7 +4,7 @@ resource "azurerm_kubernetes_cluster" "chatbot_aks" {
   resource_group_name = var.resource_group_name
   dns_prefix          = "chatbotaks"
 
-  kubernetes_version  = "1.29.2" # adjust to available version in region
+  kubernetes_version  = "1.29.2" # adjust to latest available in region
 
   default_node_pool {
     name                = "systempool"
@@ -20,6 +20,9 @@ resource "azurerm_kubernetes_cluster" "chatbot_aks" {
     identity_ids = [azurerm_user_assigned_identity.aks_identity.id]
   }
 
+  # Wire AKS to ACR
+  depends_on = [azurerm_role_assignment.aks_acr_pull]
+
   network_profile {
     network_plugin     = "azure"
     service_cidr       = "10.0.0.0/16"
@@ -29,8 +32,12 @@ resource "azurerm_kubernetes_cluster" "chatbot_aks" {
 
   role_based_access_control_enabled = true
 
+  # For GitHub Actions OIDC → AKS (Helm deploys later)
   oidc_issuer_enabled       = true
   workload_identity_enabled = true
+
+  # Addon: Application Gateway Ingress Controller (AGIC)
+
 
   tags = {
     environment = "chatbot"
