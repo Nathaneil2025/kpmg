@@ -1,4 +1,4 @@
-name: Destroy Chatbot Infra + App
+name: Destroy Chatbot Infra + App new
 
 on:
   workflow_dispatch:   # ✅ manual trigger only
@@ -45,7 +45,7 @@ jobs:
         continue-on-error: true
 
       # ----------------------
-      # Scale Down Node Pools (prevent stuck deletions)
+      # Scale Down Node Pools
       # ----------------------
       - name: Scale down node pool
         run: |
@@ -66,26 +66,41 @@ jobs:
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform init
 
-      - name: Detect & Force Unlock if Locked
+      # ✅ Safe lock detection + unlock (same as deploy)
+      - name: Detect & force-unlock Terraform state if locked
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           echo "Checking if Terraform state is locked…"
           terraform plan -lock-timeout=0 > plan.out 2>&1 || true
 
           if grep -q "Error acquiring the state lock" plan.out; then
-            echo "State locked. Extracting lock ID…"
+            echo "State appears locked; extracting lock ID…"
             sed 's/│//g' plan.out > plan.clean
-            LOCK_ID=$(awk '/ID:/ {print $2; exit}' plan.clean)
+
+            LOCK_ID=$(
+              awk '
+                /Lock Info:/ {inblock=1; next}
+                inblock && /^$/ {inblock=0}
+                inblock && /ID:[[:space:]]*/ {
+                  line=$0
+                  sub(/^.*ID:[[:space:]]*/, "", line)
+                  split(line, a, /[[:space:]]+/)
+                  print a[1]
+                  exit
+                }
+              ' plan.clean
+            )
 
             if [ -n "$LOCK_ID" ]; then
               echo "Unlocking with ID: $LOCK_ID"
               terraform force-unlock -force "$LOCK_ID" || true
             else
-              echo "❌ Failed to parse lock ID"
+              echo "❌ Could not parse lock ID. Lock block:"
               sed -n '/Lock Info:/,/^$/p' plan.clean || true
+              exit 1
             fi
           else
-            echo "✅ No active lock found."
+            echo "✅ No active lock found. Skipping unlock."
           fi
 
       - name: Terraform Destroy
@@ -95,5 +110,3 @@ jobs:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          TF_VAR_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
