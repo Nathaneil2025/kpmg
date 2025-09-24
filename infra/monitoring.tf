@@ -18,11 +18,9 @@ resource "azurerm_log_analytics_workspace" "chatbot_logs" {
 # -----------------------------------------
 
 # AKS diagnostics
+# (optional – you can add AKS diagnostic settings later if you want)
 
-
-
-
-# ACR diagnostics
+# ACR diagnostics (uses existing ACR "myacr2025kpm")
 resource "azurerm_monitor_diagnostic_setting" "acr_diagnostics" {
   name                       = "acr-diagnostics"
   target_resource_id         = data.azurerm_container_registry.chatbot_acr.id
@@ -51,8 +49,6 @@ resource "azurerm_monitor_diagnostic_setting" "redis_diagnostics" {
     category = "AllMetrics"
   }
 }
-
-
 
 # APIM diagnostics
 resource "azurerm_monitor_diagnostic_setting" "apim_diagnostics" {
