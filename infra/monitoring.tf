@@ -18,23 +18,7 @@ resource "azurerm_log_analytics_workspace" "chatbot_logs" {
 # -----------------------------------------
 
 # AKS diagnostics
-resource "azurerm_monitor_diagnostic_setting" "acr_diagnostics" {
-  name                       = "acr-diagnostics"
-  target_resource_id         = data.azurerm_container_registry.chatbot_acr.id
-  log_analytics_workspace_id = azurerm_log_analytics_workspace.chatbot_logs.id
 
-  enabled_log {
-    category = "ContainerRegistryRepositoryEvents"
-  }
-
-  enabled_log {
-    category = "ContainerRegistryLoginEvents"
-  }
-
-  metric {
-    category = "AllMetrics"
-  }
-}
 
 # Cosmos DB diagnostics
 resource "azurerm_monitor_diagnostic_setting" "cosmos_diagnostics" {
