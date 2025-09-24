@@ -27,6 +27,72 @@ jobs:
       - name: Terraform Init
         working-directory: infra
         run: terraform init
+      
+            - name: Terraform Init
+        working-directory: infra
+        run: terraform init
+
+      # NEW: detect lock, extract real ID, force-unlock, then continue
+      - name: Detect & force-unlock Terraform state if locked
+        working-directory: infra
+        run: |
+          echo "Checking if Terraform state is locked..."
+          # Run a dry plan to detect lock, but stop immediately if no lock
+          terraform plan -lock-timeout=0 > plan.out 2>&1 || true
+
+          if grep -q "Error acquiring the state lock" plan.out; then
+            echo "State appears locked; extracting lock ID…"
+            LOCK_ID=$(awk '/^ *ID:/ {print $2; exit}' plan.out)
+            echo "Found lock ID: $LOCK_ID"
+            if [ -n "$LOCK_ID" ]; then
+              terraform force-unlock -force "$LOCK_ID" || true
+            else
+              echo "Could not parse lock ID; showing lock block for debugging:"
+              sed -n '/Lock Info:/,/^$/p' plan.out || true
+            fi
+          else
+            echo "✅ No active lock found. Skipping unlock."
+          fi
+
+        working-directory: infra
+        run: |
+          set +e
+          # Run a dry plan to trigger lock error (if any) and capture output
+          terraform plan > plan.out 2>&1
+          EXIT=$?
+          if grep -q "Error acquiring the state lock" plan.out; then
+            echo "State appears locked; extracting lock ID…"
+            # Parse the 'Lock Info' block and pull the actual ID line
+            LOCK_ID=$(awk '/^ *ID:/ {print $2; exit}' plan.out)
+            echo "Found lock ID: $LOCK_ID"
+            if [ -n "$LOCK_ID" ]; then
+              terraform force-unlock -force "$LOCK_ID" || true
+            else
+              echo "Could not parse lock ID; printing lock block for debugging:"
+              sed -n '/Lock Info:/,/^$/p' plan.out || true
+            fi
+          else
+            echo "No active lock found."
+          fi
+          # Always exit 0 so the main plan below runs fresh
+          exit 0
+
+      - name: Terraform Plan
+        working-directory: infra
+        run: terraform plan
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Terraform Apply
+        working-directory: infra
+        run: terraform apply -auto-approve
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
 
       
       - name: Terraform Plan
