@@ -1,4 +1,4 @@
-name: Destroy Chatbot Infra + App new
+name: Destroy Chatbot Infra + App
 
 on:
   workflow_dispatch:   # ✅ manual trigger only
@@ -27,6 +27,9 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      # ----------------------
+      # AKS cleanup
+      # ----------------------
       - name: Get AKS Credentials
         run: |
           az aks get-credentials -g $RESOURCE_GROUP -n $CLUSTER_NAME --overwrite-existing
@@ -47,6 +50,9 @@ jobs:
             --node-count 0 || true
         continue-on-error: true
 
+      # ----------------------
+      # Terraform destroy
+      # ----------------------
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -82,3 +88,5 @@ jobs:
           TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           TF_VAR_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
           TF_VAR_github_oidc_principal_id: ${{ secrets.AZURE_CLIENT_OBJECT_ID }}
+          TF_VAR_acr_name: "myacr2025kpm"
+          TF_VAR_acr_rg: "platform_candidate_2"
