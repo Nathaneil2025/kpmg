@@ -29,17 +29,6 @@ jobs:
         run: terraform init
 
       
-        working-directory: infra
-        run: |
-          LOCK_INFO=$(terraform plan 2>&1 || true)
-          if echo "$LOCK_INFO" | grep -q "Lock Info"; then
-            LOCK_ID=$(echo "$LOCK_INFO" | grep "ID:" | awk '{print $2}')
-            echo "Found lock ID: $LOCK_ID"
-            terraform force-unlock -force $LOCK_ID || true
-          else
-            echo "No active lock found, moving on."
-          fi
-
       - name: Terraform Plan
         working-directory: infra
         run: terraform plan
@@ -147,7 +136,3 @@ jobs:
 
       - name: Deploy Chatbot via Helm
         run: |
-          helm upgrade --install chatbot ./helm/chatbot \
-            --namespace chatbot --create-namespace \
-            --set image.repository=${{ steps.build_push.outputs.IMAGE }} \
-            --set image.tag=${{ env.VERSION }}
