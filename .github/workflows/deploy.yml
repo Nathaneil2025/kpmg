@@ -32,6 +32,44 @@ jobs:
       - name: Detect & force-unlock Terraform state if locked
         working-directory: infra
         run: |
+          echo "Checking if Terraform state is locked…"
+          # Fast check: don't wait on the lock
+          terraform plan -lock-timeout=0 > plan.out 2>&1 || true
+
+          if grep -q "Error acquiring the state lock" plan.out; then
+            echo "State appears locked; extracting lock ID…"
+
+            # Remove box-drawing chars and parse the Lock Info block safely
+            sed 's/│//g' plan.out > plan.clean
+
+            LOCK_ID=$(
+              awk '
+                /Lock Info:/ {inblock=1; next}
+                inblock && /^$/ {inblock=0}
+                inblock && /ID:[[:space:]]*/ {
+                  line=$0
+                  sub(/^.*ID:[[:space:]]*/, "", line)
+                  split(line, a, /[[:space:]]+/)
+                  print a[1]
+                  exit
+                }
+              ' plan.clean
+            )
+
+            if [ -n "$LOCK_ID" ]; then
+              echo "Unlocking with ID: $LOCK_ID"
+              terraform force-unlock -force "$LOCK_ID" || true
+            else
+              echo "❌ Could not parse lock ID. Lock block:"
+              sed -n '/Lock Info:/,/^$/p' plan.clean || true
+              exit 1
+            fi
+          else
+            echo "✅ No active lock found. Skipping unlock."
+          fi
+
+        working-directory: infra
+        run: |
           echo "Checking if Terraform state is locked..."
           # Run a dry plan to detect lock, but stop immediately if no lock
           terraform plan -lock-timeout=0 > plan.out 2>&1 || true
