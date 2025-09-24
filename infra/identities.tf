@@ -1,8 +1,4 @@
-# Reference the existing ACR "myacr2025kpm" in resource group "platform_candidate_2"
-data "azurerm_container_registry" "chatbot_acr" {
-  name                = "myacr2025kpm"
-  resource_group_name = "platform_candidate_2"
-}
+
 
 # -----------------------------
 # Managed identity for AKS control plane
