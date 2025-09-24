@@ -27,5 +27,4 @@ output "aks_oidc_issuer_url" {
 # ACR Login Server (so workflows know where to push images)
 output "acr_login_server" {
   value = data.azurerm_container_registry.chatbot_acr.login_server
-
 }

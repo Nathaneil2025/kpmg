@@ -1,3 +1,8 @@
+variable "subscription_id" {
+  description = "Azure subscription ID"
+  type        = string
+  default     = "71d6ab4d-a2ae-4612-b630-7bda563937fe"
+}
 
 variable "location" {
   description = "Azure region where resources will be deployed"

@@ -20,8 +20,9 @@ resource "azurerm_log_analytics_workspace" "chatbot_logs" {
 # AKS diagnostics
 
 
-# Cosmos DB diagnostics
-# ACR diagnostics (using existing registry via data source)
+
+
+# ACR diagnostics
 resource "azurerm_monitor_diagnostic_setting" "acr_diagnostics" {
   name                       = "acr-diagnostics"
   target_resource_id         = data.azurerm_container_registry.chatbot_acr.id
@@ -35,7 +36,6 @@ resource "azurerm_monitor_diagnostic_setting" "acr_diagnostics" {
     category = "AllMetrics"
   }
 }
-
 
 # Redis diagnostics
 resource "azurerm_monitor_diagnostic_setting" "redis_diagnostics" {
