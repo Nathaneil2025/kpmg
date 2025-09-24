@@ -78,6 +78,23 @@ jobs:
             echo "✅ No lock found. Skipping unlock."
           fi
 
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          echo "🔍 Checking for .tflock blob in backend…"
+          LOCK_BLOB=$(az storage blob list \
+            --account-name tfkpm2025 \
+            --container-name tfstate \
+            --prefix infra/terraform.tfstate.tflock \
+            --auth-mode login \
+            --query "[].name" -o tsv)
+
+          if [ -n "$LOCK_BLOB" ]; then
+            echo "⚠️ State lock detected. Forcing unlock..."
+            terraform force-unlock -force $(date +%s) || true
+          else
+            echo "✅ No lock found. Skipping unlock."
+          fi
+
       - name: Terraform Destroy
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform destroy -auto-approve
