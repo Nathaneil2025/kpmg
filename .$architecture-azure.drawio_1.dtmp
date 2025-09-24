@@ -1,0 +1,109 @@
+<mxfile host="Electron" modified="2025-09-23T18:02:07.310Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.2.5 Chrome/120.0.6099.109 Electron/28.1.0 Safari/537.36" etag="jsu9EHmXFpknnxhgBxdO" version="24.2.5" type="device">
+  <diagram id="70fafb2d2e85466492a1bc5b6ed3ef5f" name="Enterprise Chatbot on Azure">
+    <mxGraphModel dx="1998" dy="1190" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="users" value="Users (Employees/Partners)&lt;br&gt;Entra ID + Conditional Access +" style="shape=ellipse;whiteSpace=wrap;html=1;strokeWidth=2;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14" parent="1" vertex="1">
+          <mxGeometry x="240" y="80" width="240" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="afd" value="Azure Front Door Premium + WAF&lt;div&gt;&lt;br/&gt;&lt;/div&gt;" style="shape=process;whiteSpace=wrap;html=1;strokeWidth=2;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14" parent="1" vertex="1">
+          <mxGeometry x="507" y="80" width="320" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="apim" value="API Management (Internal VNet)&#xa;Private Endpoint + Policies (Limit/Cache)" style="shape=process;whiteSpace=wrap;html=1;strokeWidth=2;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=14" parent="1" vertex="1">
+          <mxGeometry x="910" y="70" width="330" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="vnet" value="Hub/Spoke VNet (Private Subnets)&#xa;NSG/NVA, Private DNS Zones" style="shape=swimlane;childLayout=stackLayout;rounded=1;whiteSpace=wrap;html=1;horizontal=1;startSize=30;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14" parent="1" vertex="1">
+          <mxGeometry x="300" y="200" width="2480" height="930" as="geometry" />
+        </mxCell>
+        <mxCell id="appgw" value="Application Gateway (Internal) + WAF" style="shape=process;whiteSpace=wrap;html=1;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14" parent="vnet" vertex="1">
+          <mxGeometry y="30" width="280" height="900" as="geometry" />
+        </mxCell>
+        <mxCell id="aks" value="AKS (Private Cluster)&#xa;FastAPI Pods + HPA/KEDA" style="shape=process;whiteSpace=wrap;html=1;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14" parent="vnet" vertex="1">
+          <mxGeometry x="280" y="30" width="420" height="900" as="geometry" />
+        </mxCell>
+        <mxCell id="redis" value="Azure Cache for Redis (Premium)&#xa;Session/STATE in-memory, TLS" style="shape=process;whiteSpace=wrap;html=1;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14" parent="vnet" vertex="1">
+          <mxGeometry x="700" y="30" width="320" height="900" as="geometry" />
+        </mxCell>
+        <mxCell id="cosmos" value="Azure Cosmos DB (NoSQL)&#xa;Durable per-session state, CMK" style="shape=process;whiteSpace=wrap;html=1;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14" parent="vnet" vertex="1">
+          <mxGeometry x="1020" y="30" width="320" height="900" as="geometry" />
+        </mxCell>
+        <mxCell id="1a4cf1DIQHPCqBpBZA4o-2" value="" style="endArrow=classic;html=1;rounded=0;" parent="vnet" target="aoai" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1510" y="300" as="sourcePoint" />
+            <mxPoint x="1560" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="1a4cf1DIQHPCqBpBZA4o-6" value="" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;entryX=-0.019;entryY=0.279;entryDx=0;entryDy=0;entryPerimeter=0;" parent="vnet" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1607" y="309" as="sourcePoint" />
+            <mxPoint x="1440" y="180" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="aoai" value="Azure OpenAI (Private Endpoint)&#xa;gpt-4o/4.1/mini; No public egress" style="shape=process;whiteSpace=wrap;html=1;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14" parent="vnet" vertex="1">
+          <mxGeometry x="1340" y="30" width="360" height="900" as="geometry" />
+        </mxCell>
+        <mxCell id="kv" value="Key Vault + Managed HSM&#xa;Secrets, Keys; RBAC &amp; Private Link" style="shape=process;whiteSpace=wrap;html=1;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14" parent="vnet" vertex="1">
+          <mxGeometry x="1700" y="30" width="360" height="900" as="geometry" />
+        </mxCell>
+        <mxCell id="obs" value="Azure Monitor + Log Analytics + App Insights&#xa;Logs/Metrics/Traces/Alerts" style="shape=process;whiteSpace=wrap;html=1;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14" parent="vnet" vertex="1">
+          <mxGeometry x="2060" y="30" width="420" height="900" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" parent="vnet" source="appgw" target="aks" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" parent="vnet" source="aks" target="redis" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" parent="vnet" source="aks" target="cosmos" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" parent="vnet" source="aks" target="aoai" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" parent="vnet" source="aks" target="kv" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" parent="vnet" source="aks" target="obs" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="1a4cf1DIQHPCqBpBZA4o-8" value="" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;entryX=0.084;entryY=0.298;entryDx=0;entryDy=0;entryPerimeter=0;" parent="vnet" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1173" y="282" as="sourcePoint" />
+            <mxPoint x="1080" y="280" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="1a4cf1DIQHPCqBpBZA4o-9" value="" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;entryX=0.084;entryY=0.298;entryDx=0;entryDy=0;entryPerimeter=0;" parent="vnet" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1523" y="312" as="sourcePoint" />
+            <mxPoint x="1430" y="310" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e1" parent="1" source="users" target="afd" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" parent="1" source="afd" target="apim" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" parent="1" source="apim" target="appgw" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="1a4cf1DIQHPCqBpBZA4o-10" value="" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1160" y="60" as="sourcePoint" />
+            <mxPoint x="720" y="60" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="1a4cf1DIQHPCqBpBZA4o-7" value="" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;exitX=0.918;exitY=0.266;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" target="apim" edge="1" source="redis">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1143.12" y="482" as="sourcePoint" />
+            <mxPoint x="1050" y="480.20000000000005" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="1113.12" y="480" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
