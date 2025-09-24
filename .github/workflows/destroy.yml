@@ -1,7 +1,7 @@
-name: Destroy Chatbot Infra + App
+name: Destroy Chatbot Infra + App new
 
 on:
-  workflow_dispatch:   # manual trigger only
+  workflow_dispatch:   # ✅ manual trigger only
 
 permissions:
   id-token: write
@@ -33,6 +33,7 @@ jobs:
       - name: Get AKS Credentials
         run: |
           az aks get-credentials -g $RESOURCE_GROUP -n $CLUSTER_NAME --overwrite-existing
+        continue-on-error: true
 
       # ----------------------
       # Helm Cleanup
@@ -40,7 +41,8 @@ jobs:
       - name: Uninstall Helm Releases
         run: |
           helm uninstall chatbot -n chatbot || true
-          helm uninstall ingress-azure -n kube-system || true
+          helm uninstall agic -n kube-system || true
+        continue-on-error: true
 
       # ----------------------
       # Scale Down Node Pools (prevent stuck deletions)
@@ -52,6 +54,7 @@ jobs:
             --resource-group $RESOURCE_GROUP \
             --name systempool \
             --node-count 0 || true
+        continue-on-error: true
 
       # ----------------------
       # Terraform Destroy (Infra)
@@ -62,6 +65,11 @@ jobs:
       - name: Terraform Init
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform init
+
+      - name: Terraform Force Unlock (safety)
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform force-unlock -force $(date +%s) || true
+        continue-on-error: true
 
       - name: Terraform Destroy
         working-directory: ${{ env.TF_WORKING_DIR }}

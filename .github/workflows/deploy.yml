@@ -1,10 +1,10 @@
-name: Deploy Infra
+name: infra + dbp + helm
 
 on:
-  workflow_dispatch:   # only manual trigger
+  workflow_dispatch:   # ✅ only manual trigger
 
 jobs:
-  deploy:
+  infra:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -30,8 +30,7 @@ jobs:
 
       - name: Unlock Terraform state (if needed)
         working-directory: infra
-        run: |
-          terraform force-unlock -force $(date +%s) || true
+        run: terraform force-unlock -force $(date +%s) || true
         continue-on-error: true
 
       - name: Terraform Plan
@@ -41,7 +40,6 @@ jobs:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          TF_VAR_client_id: ${{ secrets.AZURE_CLIENT_ID }}
 
       - name: Terraform Apply
         working-directory: infra
@@ -50,4 +48,102 @@ jobs:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          TF_VAR_client_id: ${{ secrets.AZURE_CLIENT_ID }}
+
+  build_push:
+    runs-on: ubuntu-latest
+    needs: infra   # ✅ wait for infra
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get ACR login server
+        id: acr
+        run: |
+          echo "login_server=$(az acr show --name chatbotacr2025 --query loginServer -o tsv)" >> $GITHUB_OUTPUT
+
+      - name: Docker Login to ACR
+        run: az acr login --name chatbotacr2025
+
+      - name: Build & Tag Docker Image
+        run: |
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          VERSION=$(az acr repository show-tags \
+            --name chatbotacr2025 \
+            --repository chatbot-service \
+            --query "[-1]" -o tsv || echo "1")
+
+          if [ -z "$VERSION" ]; then
+            VERSION=1
+          else
+            VERSION=$((VERSION+1))
+          fi
+
+          IMAGE=${{ steps.acr.outputs.login_server }}/chatbot-service:$VERSION
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+
+          docker build -t $IMAGE ./app
+          docker push $IMAGE
+
+      - name: Export image version
+        run: echo "IMAGE_VERSION=$IMAGE" >> $GITHUB_ENV
+
+  helm_deploy:
+    runs-on: ubuntu-latest
+    needs: build_push   # ✅ wait for image
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install kubectl & Helm
+        run: |
+          az aks install-cli
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group platform_candidate_2 \
+            --name chatbot-aks \
+            --overwrite-existing
+
+      - name: Install AGIC (App Gateway Ingress Controller)
+        run: |
+          helm repo add ingress-appgw https://azure.github.io/application-gateway-kubernetes-ingress/helm
+          helm repo update
+          helm upgrade --install agic ingress-appgw/ingress-azure \
+            --namespace kube-system \
+            --set appgw.subscriptionId=${{ secrets.AZURE_SUBSCRIPTION_ID }} \
+            --set appgw.resourceGroup=platform_candidate_2 \
+            --set appgw.name=chatbot-appgw \
+            --set armAuth.type=msi \
+            --set armAuth.identityId=$(az identity show --name chatbot-aks-identity --resource-group platform_candidate_2 --query id -o tsv) \
+            --set rbac.enabled=true
+
+      - name: Deploy Chatbot via Helm
+        run: |
+          helm upgrade --install chatbot ./helm/chatbot \
+            --namespace chatbot --create-namespace \
+            --set image.repository=${{ steps.build_push.outputs.IMAGE_VERSION }} \
+            --set image.tag=latest
