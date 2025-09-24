@@ -28,18 +28,14 @@ jobs:
         working-directory: infra
         run: terraform init
 
-      
       - name: Detect & force-unlock Terraform state if locked
         working-directory: infra
         run: |
           echo "Checking if Terraform state is locked…"
-          # Fast check: don't wait on the lock
           terraform plan -lock-timeout=0 > plan.out 2>&1 || true
 
           if grep -q "Error acquiring the state lock" plan.out; then
             echo "State appears locked; extracting lock ID…"
-
-            # Remove box-drawing chars and parse the Lock Info block safely
             sed 's/│//g' plan.out > plan.clean
 
             LOCK_ID=$(
@@ -68,7 +64,6 @@ jobs:
             echo "✅ No active lock found. Skipping unlock."
           fi
 
-    
       - name: Terraform Plan
         working-directory: infra
         run: terraform plan
@@ -76,6 +71,8 @@ jobs:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
 
       - name: Terraform Apply
         working-directory: infra
@@ -84,10 +81,12 @@ jobs:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          TF_VAR_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
 
   build_push:
     runs-on: ubuntu-latest
-    needs: infra   # ✅ wait for infra
+    needs: infra
     permissions:
       id-token: write
       contents: read
@@ -133,7 +132,7 @@ jobs:
 
   helm_deploy:
     runs-on: ubuntu-latest
-    needs: build_push   # ✅ wait for image
+    needs: build_push
     permissions:
       id-token: write
       contents: read
@@ -176,3 +175,7 @@ jobs:
 
       - name: Deploy Chatbot via Helm
         run: |
+          helm upgrade --install chatbot ./helm/chatbot \
+            --namespace chatbot --create-namespace \
+            --set image.repository=${{ steps.acr.outputs.login_server }}/chatbot-service \
+            --set image.tag=${{ env.VERSION }}
