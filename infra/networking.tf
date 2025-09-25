@@ -1,3 +1,6 @@
+# ============================
+# Virtual Network
+# ============================
 resource "azurerm_virtual_network" "main_vnet" {
   name                = "chatbot-vnet"
   location            = var.location
@@ -9,6 +12,9 @@ resource "azurerm_virtual_network" "main_vnet" {
   }
 }
 
+# ============================
+# Subnets
+# ============================
 resource "azurerm_subnet" "aks_subnet" {
   name                 = "aks-subnet"
   resource_group_name  = var.resource_group_name
@@ -39,13 +45,14 @@ resource "azurerm_subnet" "data_subnet" {
   address_prefixes     = ["192.168.2.0/24"]
 }
 
-# NSG for APIM
+# ============================
+# Network Security Group (APIM)
+# ============================
 resource "azurerm_network_security_group" "apim_nsg" {
   name                = "apim-nsg"
   location            = var.location
   resource_group_name = var.resource_group_name
 
-  # client traffic
   security_rule {
     name                       = "AllowClientInbound"
     priority                   = 100
@@ -58,7 +65,6 @@ resource "azurerm_network_security_group" "apim_nsg" {
     source_port_range          = "*"
   }
 
-  # control plane
   security_rule {
     name                       = "AllowMgmtInbound"
     priority                   = 110
@@ -71,7 +77,6 @@ resource "azurerm_network_security_group" "apim_nsg" {
     source_port_range          = "*"
   }
 
-  # required Azure service dependencies
   security_rule {
     name                       = "AllowOutboundInternet"
     priority                   = 200
@@ -137,7 +142,9 @@ resource "azurerm_network_security_group" "apim_nsg" {
   }
 }
 
-# Associate NSG + Route Table with APIM subnet
+# ============================
+# Associations
+# ============================
 resource "azurerm_subnet_network_security_group_association" "apim_assoc" {
   subnet_id                 = azurerm_subnet.apim_subnet.id
   network_security_group_id = azurerm_network_security_group.apim_nsg.id
