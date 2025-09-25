@@ -56,3 +56,4 @@ resource "azurerm_subnet_network_security_group_association" "apim_assoc" {
   subnet_id                 = azurerm_subnet.apim_subnet.id
   network_security_group_id = azurerm_network_security_group.apim_nsg.id
 }
+

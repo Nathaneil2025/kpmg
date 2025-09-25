@@ -24,21 +24,21 @@ resource "azurerm_role_assignment" "workload_kv_secrets" {
 
 # Role Assignment: allow GitHub service principal full Key Vault admin rights
 resource "azurerm_role_assignment" "github_kv_admin" {
-  principal_id         = "4e4f585b-62da-4b84-88cd-8e247f841622" # Object ID of your SP
+  principal_id         = "4e4f585b-62da-4b84-88cd-8e247f841622" # GitHub Actions SP objectId
   role_definition_name = "Key Vault Administrator"
   scope                = azurerm_key_vault.chatbot_kv.id
 }
 
-# Role Assignment: allow GitHub OIDC federated identity to manage certs
+# Role Assignment: allow GitHub service principal to manage certs
 resource "azurerm_role_assignment" "github_kv_certificates" {
-  principal_id         = data.azurerm_client_config.current.object_id
+  principal_id         = "4e4f585b-62da-4b84-88cd-8e247f841622" # GitHub Actions SP objectId
   role_definition_name = "Key Vault Certificates Officer"
   scope                = azurerm_key_vault.chatbot_kv.id
 }
 
-# Role Assignment: allow GitHub OIDC federated identity to read secrets
+# Role Assignment: allow GitHub service principal to read secrets
 resource "azurerm_role_assignment" "github_kv_secrets" {
-  principal_id         = data.azurerm_client_config.current.object_id
+  principal_id         = "4e4f585b-62da-4b84-88cd-8e247f841622" # GitHub Actions SP objectId
   role_definition_name = "Key Vault Secrets User"
   scope                = azurerm_key_vault.chatbot_kv.id
 }

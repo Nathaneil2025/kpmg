@@ -19,7 +19,12 @@ resource "azurerm_api_management" "chatbot_apim" {
   tags = {
     environment = "chatbot"
   }
+
+  depends_on = [
+    azurerm_subnet_network_security_group_association.apim_assoc
+  ]
 }
+
 
 # Define the API object but don’t bind backend here
 resource "azurerm_api_management_api" "chatbot_api" {
@@ -58,4 +63,10 @@ resource "azurerm_api_management_api_policy" "rate_limit_policy" {
   </outbound>
 </policies>
 XML
+
+  # ✅ Ensure APIM + API are ready first
+  depends_on = [
+    azurerm_api_management.chatbot_apim,
+    azurerm_api_management_api.chatbot_api
+  ]
 }
