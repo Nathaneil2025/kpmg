@@ -36,3 +36,15 @@ resource "azurerm_kubernetes_cluster" "chatbot_aks" {
     environment = "chatbot"
   }
 }
+
+resource "azurerm_role_assignment" "aks_uami_netcontrib" {
+  scope                = azurerm_subnet.aks_subnet.id
+  role_definition_name = "Network Contributor"
+  principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
+}
+
+resource "azurerm_role_assignment" "aks_uami_netcontrib" {
+  scope                = azurerm_subnet.aks_subnet.id
+  role_definition_name = "Network Contributor"
+  principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
+}
