@@ -85,40 +85,114 @@ resource "azurerm_network_security_group" "apim_nsg" {
   location            = var.location
   resource_group_name = var.resource_group_name
 
+  # Inbound rules
   security_rule {
-    name                       = "AllowHttpsInbound"
+    name                       = "AllowClientInbound"
     priority                   = 100
     direction                  = "Inbound"
     access                     = "Allow"
     protocol                   = "Tcp"
+    source_address_prefix      = "Internet"
     source_port_range          = "*"
-    destination_port_range     = "443"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
+    destination_address_prefix = "VirtualNetwork"
+    destination_port_ranges    = ["80", "443"]
   }
 
   security_rule {
-    name                       = "AllowOutboundMgmt"
-    priority                   = 200
-    direction                  = "Outbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_ranges    = ["443", "3442", "3443"]
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
-  }
-
-  security_rule {
-    name                       = "AllowManagement"
+    name                       = "AllowMgmtInbound"
     priority                   = 110
     direction                  = "Inbound"
     access                     = "Allow"
     protocol                   = "Tcp"
+    source_address_prefix      = "ApiManagement"
     source_port_range          = "*"
-    destination_port_ranges    = ["3443", "3442"]
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
+    destination_address_prefix = "VirtualNetwork"
+    destination_port_range     = "3443"
+  }
+
+  security_rule {
+    name                       = "AllowAzureLBInbound"
+    priority                   = 120
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_address_prefix      = "AzureLoadBalancer"
+    source_port_range          = "*"
+    destination_address_prefix = "VirtualNetwork"
+    destination_port_range     = "6390"
+  }
+
+  security_rule {
+    name                       = "AllowTrafficManagerInbound"
+    priority                   = 130
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_address_prefix      = "AzureTrafficManager"
+    source_port_range          = "*"
+    destination_address_prefix = "VirtualNetwork"
+    destination_port_range     = "443"
+  }
+
+  # Outbound rules
+  security_rule {
+    name                       = "AllowOutboundInternet"
+    priority                   = 200
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_address_prefix      = "VirtualNetwork"
+    source_port_range          = "*"
+    destination_address_prefix = "Internet"
+    destination_port_range     = "80"
+  }
+
+  security_rule {
+    name                       = "AllowOutboundStorage"
+    priority                   = 210
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_address_prefix      = "VirtualNetwork"
+    source_port_range          = "*"
+    destination_address_prefix = "Storage"
+    destination_port_range     = "443"
+  }
+
+  security_rule {
+    name                       = "AllowOutboundSQL"
+    priority                   = 220
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_address_prefix      = "VirtualNetwork"
+    source_port_range          = "*"
+    destination_address_prefix = "SQL"
+    destination_port_range     = "1433"
+  }
+
+  security_rule {
+    name                       = "AllowOutboundKeyVault"
+    priority                   = 230
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_address_prefix      = "VirtualNetwork"
+    source_port_range          = "*"
+    destination_address_prefix = "AzureKeyVault"
+    destination_port_range     = "443"
+  }
+
+  security_rule {
+    name                       = "AllowOutboundAzureMonitor"
+    priority                   = 240
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_address_prefix      = "VirtualNetwork"
+    source_port_range          = "*"
+    destination_address_prefix = "AzureMonitor"
+    destination_port_ranges    = ["1886", "443"]
   }
 
   tags = {
