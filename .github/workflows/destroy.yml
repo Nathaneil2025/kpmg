@@ -21,7 +21,7 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Cleanup AKS-related workloads (optional but safe)
+      # 🧹 Cleanup AKS-related workloads (safe cleanup, doesn't block destroy)
       - name: Get AKS Credentials
         run: az aks get-credentials -g $RESOURCE_GROUP -n $CLUSTER_NAME --overwrite-existing
         continue-on-error: true
@@ -41,7 +41,7 @@ jobs:
             --node-count 0 || true
         continue-on-error: true
 
-      # Terraform destroy (APIM + networking first)
+      # 💣 Terraform destroy
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -54,18 +54,9 @@ jobs:
           ARM_TENANT_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
           ARM_SUBSCRIPTION_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).subscriptionId }}
 
-      - name: Terraform Destroy (APIM reset)
+      - name: Terraform Destroy (full infra)
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: |
-          terraform destroy -auto-approve \
-            -target=azurerm_api_management.chatbot_apim \
-            -target=azurerm_api_management_api.chatbot_api \
-            -target=azurerm_api_management_api_policy.rate_limit_policy \
-            -target=azurerm_subnet.apim_subnet \
-            -target=azurerm_subnet_network_security_group_association.apim_assoc \
-            -target=azurerm_network_security_group.apim_nsg \
-            -target=azurerm_route_table.apim_rt \
-            -target=azurerm_subnet_route_table_association.apim_subnet_rt
+        run: terraform destroy -auto-approve
         env:
           ARM_CLIENT_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }}
           ARM_CLIENT_SECRET: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
