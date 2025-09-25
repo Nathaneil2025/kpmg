@@ -140,11 +140,6 @@ resource "azurerm_network_security_group" "apim_nsg" {
   tags = {
     environment = "chatbot"
   }
-
-  # Ensure NSG waits for association to be destroyed first
-  depends_on = [
-    azurerm_subnet_network_security_group_association.apim_assoc
-  ]
 }
 
 # ============================
@@ -163,11 +158,6 @@ resource "azurerm_route_table" "apim_rt" {
   tags = {
     environment = "chatbot"
   }
-
-  # Ensure RT waits for association to be destroyed first
-  depends_on = [
-    azurerm_subnet_route_table_association.apim_subnet_rt
-  ]
 }
 
 resource "azurerm_subnet_route_table_association" "apim_subnet_rt" {
