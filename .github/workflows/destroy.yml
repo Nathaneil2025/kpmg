@@ -16,14 +16,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 🔑 Fixed login step (use creds JSON)
       - name: Azure Login (Service Principal with Secret)
         uses: azure/login@v2
         with:
-          auth-type: SERVICE_PRINCIPAL
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       # AKS cleanup
       - name: Get AKS Credentials
