@@ -77,66 +77,6 @@ resource "azurerm_network_security_group" "apim_nsg" {
     source_port_range          = "*"
   }
 
-  security_rule {
-    name                       = "AllowOutboundInternet"
-    priority                   = 200
-    direction                  = "Outbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_address_prefix      = "VirtualNetwork"
-    destination_address_prefix = "Internet"
-    destination_port_range     = "80"
-    source_port_range          = "*"
-  }
-
-  security_rule {
-    name                       = "AllowOutboundStorage"
-    priority                   = 210
-    direction                  = "Outbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_address_prefix      = "VirtualNetwork"
-    destination_address_prefix = "Storage"
-    destination_port_range     = "443"
-    source_port_range          = "*"
-  }
-
-  security_rule {
-    name                       = "AllowOutboundSQL"
-    priority                   = 220
-    direction                  = "Outbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_address_prefix      = "VirtualNetwork"
-    destination_address_prefix = "SQL"
-    destination_port_range     = "1433"
-    source_port_range          = "*"
-  }
-
-  security_rule {
-    name                       = "AllowOutboundKeyVault"
-    priority                   = 230
-    direction                  = "Outbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_address_prefix      = "VirtualNetwork"
-    destination_address_prefix = "AzureKeyVault"
-    destination_port_range     = "443"
-    source_port_range          = "*"
-  }
-
-  security_rule {
-    name                       = "AllowOutboundAzureMonitor"
-    priority                   = 240
-    direction                  = "Outbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_address_prefix      = "VirtualNetwork"
-    destination_address_prefix = "AzureMonitor"
-    destination_port_ranges    = ["443", "1886"]
-    source_port_range          = "*"
-  }
-
   tags = {
     environment = "chatbot"
   }
