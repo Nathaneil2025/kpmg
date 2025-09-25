@@ -111,12 +111,14 @@ jobs:
             --overwrite-existing
 
       - name: Install AGIC
+        env:
+          SUBSCRIPTION_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).subscriptionId }}
         run: |
           helm repo add ingress-appgw https://azure.github.io/application-gateway-kubernetes-ingress/helm
           helm repo update
           helm upgrade --install agic ingress-appgw/ingress-azure \
             --namespace kube-system \
-            --set appgw.subscriptionId=${{ fromJson(secrets.AZURE_CREDENTIALS).subscriptionId }} \
+            --set appgw.subscriptionId=$SUBSCRIPTION_ID \
             --set appgw.resourceGroup=platform_candidate_2 \
             --set appgw.name=chatbot-appgw \
             --set armAuth.type=msi \
