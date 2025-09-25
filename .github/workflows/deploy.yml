@@ -14,7 +14,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Azure Login (OIDC)
+      - name: Azure Login
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -97,7 +97,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Azure Login (OIDC)
+      - name: Azure Login
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -106,8 +106,7 @@ jobs:
 
       - name: Get ACR login server
         id: acr
-        run: |
-          echo "login_server=$(az acr show --name acrcandidates --resource-group ai-candidates --query loginServer -o tsv)" >> $GITHUB_OUTPUT
+        run: echo "login_server=acrcandidates.azurecr.io" >> $GITHUB_OUTPUT
 
       - name: Docker Login to ACR
         run: az acr login --name acrcandidates --resource-group ai-candidates
@@ -126,35 +125,7 @@ jobs:
             VERSION=$((VERSION+1))
           fi
 
-          IMAGE=${{ steps.acr.outputs.login_server }}/chatbot-service:$VERSION
-          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-
-          docker build -t $IMAGE ./app
-          docker push $IMAGE
-
-        id: acr
-        run: |
-          echo "login_server=$(az acr show --name myacr2025kpm --resource-group platform_candidate_2 --query loginServer -o tsv)" >> $GITHUB_OUTPUT
-
-      - name: Docker Login to ACR
-        run: az acr login --name myacr2025kpm
-
-      - name: Build & Tag Docker Image
-        run: |
-          VERSION=$(az acr repository show-tags \
-            --name myacr2025kpm \
-            --resource-group platform_candidate_2 \
-            --repository chatbot-service \
-            --query "[-1]" -o tsv || echo "")
-
-          if [ -z "$VERSION" ]; then
-            VERSION=1
-          else
-            VERSION=$((VERSION+1))
-          fi
-
-          IMAGE=${{ steps.acr.outputs.login_server }}/chatbot-service:$VERSION
+          IMAGE=acrcandidates.azurecr.io/chatbot-service:$VERSION
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
@@ -172,7 +143,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Azure Login (OIDC)
+      - name: Azure Login
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -208,5 +179,5 @@ jobs:
         run: |
           helm upgrade --install chatbot ./helm/chatbot \
             --namespace chatbot --create-namespace \
-            --set image.repository=${{ steps.acr.outputs.login_server }}/chatbot-service \
+            --set image.repository=acrcandidates.azurecr.io/chatbot-service \
             --set image.tag=${{ env.VERSION }}
