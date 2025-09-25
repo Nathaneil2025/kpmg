@@ -24,12 +24,6 @@ resource "azurerm_user_assigned_identity" "workload_identity" {
   }
 }
 
-# Reference the existing ACR "acrcandidates" in resource group "ai-candidates"
-data "azurerm_container_registry" "chatbot_acr" {
-  name                = "acrcandidates"
-  resource_group_name = "ai-candidates"
-}
-
 # -----------------------------
 # ACR Pull Role Assignment for AKS kubelet identity
 # -----------------------------
