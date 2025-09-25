@@ -200,20 +200,3 @@ resource "azurerm_network_security_group" "apim_nsg" {
   }
 }
 
-# -------------------
-# Subnet Delegation (critical for APIM)
-# -------------------
-resource "azurerm_subnet" "apim_subnet" {
-  name                 = "apim-subnet"
-  resource_group_name  = var.resource_group_name
-  virtual_network_name = azurerm_virtual_network.main_vnet.name
-  address_prefixes     = ["192.168.1.0/24"]
-
-  delegation {
-    name = "apim_delegation"
-    service_delegation {
-      name    = "Microsoft.ApiManagement/service"
-      actions = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
-    }
-  }
-}
