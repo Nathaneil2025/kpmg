@@ -16,20 +16,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Azure login (Service Principal with Secret)
+      - name: Azure Login (Service Principal with Secret)
         uses: azure/login@v2
         with:
+          auth-type: SERVICE_PRINCIPAL
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
 
-      # ----------------------
       # AKS cleanup
-      # ----------------------
       - name: Get AKS Credentials
-        run: |
-          az aks get-credentials -g $RESOURCE_GROUP -n $CLUSTER_NAME --overwrite-existing
+        run: az aks get-credentials -g $RESOURCE_GROUP -n $CLUSTER_NAME --overwrite-existing
         continue-on-error: true
 
       - name: Uninstall Helm Releases
@@ -47,9 +45,7 @@ jobs:
             --node-count 0 || true
         continue-on-error: true
 
-      # ----------------------
       # Terraform destroy
-      # ----------------------
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -61,42 +57,6 @@ jobs:
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Detect & force-unlock Terraform state if locked
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: |
-          echo "Checking if Terraform state is locked…"
-          terraform plan -lock-timeout=0 > plan.out 2>&1 || true
-
-          if grep -q "Error acquiring the state lock" plan.out; then
-            echo "State appears locked; extracting lock ID…"
-            sed 's/│//g' plan.out > plan.clean
-
-            LOCK_ID=$(
-              awk '
-                /Lock Info:/ {inblock=1; next}
-                inblock && /^$/ {inblock=0}
-                inblock && /ID:[[:space:]]*/ {
-                  line=$0
-                  sub(/^.*ID:[[:space:]]*/, "", line)
-                  split(line, a, /[[:space:]]+/)
-                  print a[1]
-                  exit
-                }
-              ' plan.clean
-            )
-
-            if [ -n "$LOCK_ID" ]; then
-              echo "Unlocking with ID: $LOCK_ID"
-              terraform force-unlock -force "$LOCK_ID" || true
-            else
-              echo "❌ Could not parse lock ID. Lock block:"
-              sed -n '/Lock Info:/,/^$/p' plan.clean || true
-              exit 1
-            fi
-          else
-            echo "✅ No active lock found. Skipping unlock."
-          fi
 
       - name: Terraform Destroy
         working-directory: ${{ env.TF_WORKING_DIR }}

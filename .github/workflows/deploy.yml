@@ -6,20 +6,19 @@ on:
 jobs:
   infra:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Azure Login
+      - name: Azure Login (Service Principal with Secret)
         uses: azure/login@v2
         with:
+          auth-type: SERVICE_PRINCIPAL
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -27,42 +26,11 @@ jobs:
       - name: Terraform Init
         working-directory: infra
         run: terraform init
-
-      - name: Detect & force-unlock Terraform state if locked
-        working-directory: infra
-        run: |
-          echo "Checking if Terraform state is locked…"
-          terraform plan -lock-timeout=0 > plan.out 2>&1 || true
-
-          if grep -q "Error acquiring the state lock" plan.out; then
-            echo "State appears locked; extracting lock ID…"
-            sed 's/│//g' plan.out > plan.clean
-
-            LOCK_ID=$(
-              awk '
-                /Lock Info:/ {inblock=1; next}
-                inblock && /^$/ {inblock=0}
-                inblock && /ID:[[:space:]]*/ {
-                  line=$0
-                  sub(/^.*ID:[[:space:]]*/, "", line)
-                  split(line, a, /[[:space:]]+/)
-                  print a[1]
-                  exit
-                }
-              ' plan.clean
-            )
-
-            if [ -n "$LOCK_ID" ]; then
-              echo "Unlocking with ID: $LOCK_ID"
-              terraform force-unlock -force "$LOCK_ID" || true
-            else
-              echo "❌ Could not parse lock ID. Lock block:"
-              sed -n '/Lock Info:/,/^$/p' plan.clean || true
-              exit 1
-            fi
-          else
-            echo "✅ No active lock found. Skipping unlock."
-          fi
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Terraform Plan
         working-directory: infra
@@ -72,8 +40,6 @@ jobs:
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          TF_VAR_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
 
       - name: Terraform Apply
         working-directory: infra
@@ -83,26 +49,23 @@ jobs:
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          TF_VAR_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
 
   build_push:
     runs-on: ubuntu-latest
     needs: infra
-    permissions:
-      contents: read
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Azure Login
+      - name: Azure Login (Service Principal with Secret)
         uses: azure/login@v2
         with:
+          auth-type: SERVICE_PRINCIPAL
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
 
       - name: Get ACR login server
         id: acr
@@ -111,19 +74,14 @@ jobs:
       - name: Docker Login to ACR
         run: az acr login --name acrcandidates --resource-group ai-candidates
 
-      - name: Build & Tag Docker Image
+      - name: Build & Push Docker Image
         run: |
           VERSION=$(az acr repository show-tags \
             --name acrcandidates \
             --resource-group ai-candidates \
             --repository chatbot-service \
             --query "[-1]" -o tsv || echo "")
-
-          if [ -z "$VERSION" ]; then
-            VERSION=1
-          else
-            VERSION=$((VERSION+1))
-          fi
+          if [ -z "$VERSION" ]; then VERSION=1; else VERSION=$((VERSION+1)); fi
 
           IMAGE=acrcandidates.azurecr.io/chatbot-service:$VERSION
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
@@ -135,20 +93,19 @@ jobs:
   helm_deploy:
     runs-on: ubuntu-latest
     needs: build_push
-    permissions:
-      contents: read
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Azure Login
+      - name: Azure Login (Service Principal with Secret)
         uses: azure/login@v2
         with:
+          auth-type: SERVICE_PRINCIPAL
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
 
       - name: Install kubectl & Helm
         run: |
@@ -162,7 +119,7 @@ jobs:
             --name chatbot-aks \
             --overwrite-existing
 
-      - name: Install AGIC (App Gateway Ingress Controller)
+      - name: Install AGIC
         run: |
           helm repo add ingress-appgw https://azure.github.io/application-gateway-kubernetes-ingress/helm
           helm repo update
