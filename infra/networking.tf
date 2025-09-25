@@ -21,6 +21,16 @@ resource "azurerm_subnet" "apim_subnet" {
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.main_vnet.name
   address_prefixes     = ["192.168.1.0/24"]
+
+  delegation {
+    name = "apim_delegation"
+    service_delegation {
+      name    = "Microsoft.ApiManagement/service"
+      actions = [
+        "Microsoft.Network/virtualNetworks/subnets/join/action"
+      ]
+    }
+  }
 }
 
 resource "azurerm_subnet" "data_subnet" {
@@ -35,19 +45,3 @@ resource "azurerm_subnet_network_security_group_association" "apim_assoc" {
   network_security_group_id = azurerm_network_security_group.apim_nsg.id
 }
 
-resource "azurerm_subnet" "apim_subnet" {
-  name                 = "apim-subnet"
-  resource_group_name  = var.resource_group_name
-  virtual_network_name = azurerm_virtual_network.main_vnet.name
-  address_prefixes     = ["192.168.1.0/24"]
-
-  delegation {
-    name = "apim_delegation"
-    service_delegation {
-      name    = "Microsoft.ApiManagement/service"
-      actions = [
-        "Microsoft.Network/virtualNetworks/subnets/join/action"
-      ]
-    }
-  }
-}
