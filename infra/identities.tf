@@ -36,10 +36,14 @@ resource "azurerm_role_assignment" "aks_acr_pull" {
 # -----------------------------
 # Role Assignment: allow your human admin user to be AKS Cluster Admin
 # -----------------------------
-resource "azurerm_role_assignment" "human_cluster_admin" {
-  principal_id         = "86cc998c-7920-4c2e-9daa-bc835f61f5da" # your real Entra ID Object ID
+resource "azurerm_role_assignment" "cicd_cluster_admin" {
+  principal_id         = "4e4f585b-62da-4b84-88cd-8e247f841622" # GitHub Actions UAMI/SP Object ID
   role_definition_name = "Azure Kubernetes Service RBAC Cluster Admin"
-  scope                = "/subscriptions/${var.subscription_id}/resourceGroups/${var.resource_group_name}"
+  scope                = azurerm_kubernetes_cluster.chatbot_aks.id
 }
 
-#
+resource "azurerm_role_assignment" "human_cluster_admin" {
+  principal_id         = "86cc998c-7920-4c2e-9daa-bc835f61f5da" # Your own Entra ID Object ID
+  role_definition_name = "Azure Kubernetes Service RBAC Cluster Admin"
+  scope                = azurerm_kubernetes_cluster.chatbot_aks.id
+}
