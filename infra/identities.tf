@@ -24,12 +24,10 @@ resource "azurerm_user_assigned_identity" "workload_identity" {
   }
 }
 
-# -----------------------------
-# Reference the existing ACR "myacr2025kpm" in RG "platform_candidate_2"
-# -----------------------------
+# Reference the existing ACR "acrcandidates" in resource group "ai-candidates"
 data "azurerm_container_registry" "chatbot_acr" {
-  name                = "myacr2025kpm"
-  resource_group_name = "platform_candidate_2"
+  name                = "acrcandidates"
+  resource_group_name = "ai-candidates"
 }
 
 # -----------------------------

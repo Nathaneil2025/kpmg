@@ -34,7 +34,6 @@ resource "azurerm_monitor_diagnostic_setting" "acr_diagnostics" {
     category = "AllMetrics"
   }
 }
-
 # Redis diagnostics
 resource "azurerm_monitor_diagnostic_setting" "redis_diagnostics" {
   name                       = "redis-diagnostics"
