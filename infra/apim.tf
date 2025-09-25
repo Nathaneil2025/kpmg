@@ -1,3 +1,6 @@
+# -------------------
+# API Management
+# -------------------
 resource "azurerm_api_management" "chatbot_apim" {
   name                = "chatbot-apim-2025"
   location            = var.location
@@ -21,12 +24,14 @@ resource "azurerm_api_management" "chatbot_apim" {
   }
 
   depends_on = [
-    azurerm_subnet_network_security_group_association.apim_assoc
+    azurerm_subnet_network_security_group_association.apim_assoc,
+    azurerm_subnet.apim_subnet
   ]
 }
 
-
-# Define the API object but don’t bind backend here
+# -------------------
+# API Definition
+# -------------------
 resource "azurerm_api_management_api" "chatbot_api" {
   name                = "chatbot-api"
   resource_group_name = var.resource_group_name
@@ -43,7 +48,9 @@ resource "azurerm_api_management_api" "chatbot_api" {
   }
 }
 
-# Rate limit policy stays valid (backend is updated later)
+# -------------------
+# API Policy
+# -------------------
 resource "azurerm_api_management_api_policy" "rate_limit_policy" {
   api_name            = azurerm_api_management_api.chatbot_api.name
   api_management_name = azurerm_api_management.chatbot_apim.name
@@ -64,13 +71,15 @@ resource "azurerm_api_management_api_policy" "rate_limit_policy" {
 </policies>
 XML
 
-  # ✅ Ensure APIM + API are ready first
   depends_on = [
     azurerm_api_management.chatbot_apim,
     azurerm_api_management_api.chatbot_api
   ]
 }
 
+# -------------------
+# APIM NSG
+# -------------------
 resource "azurerm_network_security_group" "apim_nsg" {
   name                = "apim-nsg"
   location            = var.location
@@ -87,21 +96,19 @@ resource "azurerm_network_security_group" "apim_nsg" {
     source_address_prefix      = "*"
     destination_address_prefix = "*"
   }
-  
+
   security_rule {
-  name                       = "AllowOutboundMgmt"
-  priority                   = 200
-  direction                  = "Outbound"
-  access                     = "Allow"
-  protocol                   = "Tcp"
-  source_port_range          = "*"
-  destination_port_ranges    = ["443", "3442", "3443"]
-  source_address_prefix      = "*"
-  destination_address_prefix = "*"
-}
+    name                       = "AllowOutboundMgmt"
+    priority                   = 200
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_ranges    = ["443", "3442", "3443"]
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
 
-
-  # ✅ Required for APIM management plane
   security_rule {
     name                       = "AllowManagement"
     priority                   = 110
@@ -119,3 +126,20 @@ resource "azurerm_network_security_group" "apim_nsg" {
   }
 }
 
+# -------------------
+# Subnet Delegation (critical for APIM)
+# -------------------
+resource "azurerm_subnet" "apim_subnet" {
+  name                 = "apim-subnet"
+  resource_group_name  = var.resource_group_name
+  virtual_network_name = azurerm_virtual_network.main_vnet.name
+  address_prefixes     = ["192.168.1.0/24"]
+
+  delegation {
+    name = "apim_delegation"
+    service_delegation {
+      name    = "Microsoft.ApiManagement/service"
+      actions = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
+    }
+  }
+}
