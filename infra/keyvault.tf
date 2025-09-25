@@ -50,11 +50,3 @@ resource "azurerm_role_assignment" "github_kv_secrets" {
 
   depends_on = [azurerm_key_vault.chatbot_kv]
 }
-
-resource "azurerm_role_assignment" "github_kv_certificates" {
-  principal_id         = "4e4f585b-62da-4b84-88cd-8e247f841622" # GitHub SP
-  role_definition_name = "Key Vault Certificates Officer"
-  scope                = azurerm_key_vault.chatbot_kv.id
-
-  depends_on = [azurerm_key_vault.chatbot_kv]
-}
