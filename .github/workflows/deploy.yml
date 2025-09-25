@@ -107,6 +107,34 @@ jobs:
       - name: Get ACR login server
         id: acr
         run: |
+          echo "login_server=$(az acr show --name acrcandidates --resource-group ai-candidates --query loginServer -o tsv)" >> $GITHUB_OUTPUT
+
+      - name: Docker Login to ACR
+        run: az acr login --name acrcandidates --resource-group ai-candidates
+
+      - name: Build & Tag Docker Image
+        run: |
+          VERSION=$(az acr repository show-tags \
+            --name acrcandidates \
+            --resource-group ai-candidates \
+            --repository chatbot-service \
+            --query "[-1]" -o tsv || echo "")
+
+          if [ -z "$VERSION" ]; then
+            VERSION=1
+          else
+            VERSION=$((VERSION+1))
+          fi
+
+          IMAGE=${{ steps.acr.outputs.login_server }}/chatbot-service:$VERSION
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+          docker build -t $IMAGE ./app
+          docker push $IMAGE
+
+        id: acr
+        run: |
           echo "login_server=$(az acr show --name myacr2025kpm --resource-group platform_candidate_2 --query loginServer -o tsv)" >> $GITHUB_OUTPUT
 
       - name: Docker Login to ACR
