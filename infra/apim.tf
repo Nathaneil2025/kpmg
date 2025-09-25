@@ -70,3 +70,39 @@ XML
     azurerm_api_management_api.chatbot_api
   ]
 }
+
+resource "azurerm_network_security_group" "apim_nsg" {
+  name                = "apim-nsg"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+
+  security_rule {
+    name                       = "AllowHttpsInbound"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "443"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+
+  # ✅ Required for APIM management plane
+  security_rule {
+    name                       = "AllowManagement"
+    priority                   = 110
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_ranges    = ["3443", "3442"]
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+
+  tags = {
+    environment = "chatbot"
+  }
+}
+
