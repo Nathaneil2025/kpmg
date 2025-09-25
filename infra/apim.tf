@@ -19,6 +19,7 @@ resource "azurerm_api_management" "chatbot_apim" {
     environment = "chatbot"
   }
 
+  # APIM waits until NSG + RT are attached to subnet
   depends_on = [
     azurerm_subnet_network_security_group_association.apim_assoc,
     azurerm_subnet_route_table_association.apim_subnet_rt
