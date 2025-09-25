@@ -4,7 +4,7 @@ resource "azurerm_kubernetes_cluster" "chatbot_aks" {
   resource_group_name = var.resource_group_name
   dns_prefix          = "chatbotaks"
 
-  kubernetes_version  = "1.29.2"
+  kubernetes_version  = "1.33.3"
 
   default_node_pool {
     name            = "systempool"
