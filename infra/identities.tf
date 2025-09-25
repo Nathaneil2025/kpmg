@@ -41,3 +41,5 @@ resource "azurerm_role_assignment" "human_cluster_admin" {
   role_definition_name = "Azure Kubernetes Service RBAC Cluster Admin"
   scope                = "/subscriptions/${var.subscription_id}/resourceGroups/${var.resource_group_name}"
 }
+
+#
