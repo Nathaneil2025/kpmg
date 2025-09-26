@@ -80,14 +80,10 @@ output "appgw_kv_role_assignment" {
   value       = azurerm_role_assignment.appgw_kv_secrets_user.id
 }
 
-# AppGW identity -> Resource Group (Reader)
-output "appgw_rg_reader_assignment" {
-  description = "Role assignment ID for AppGW Reader on RG"
-  value       = azurerm_role_assignment.appgw_rg_reader.id
+output "aks_rg_reader_assignment" {
+  value = azurerm_role_assignment.aks_rg_reader.id
 }
 
-# AppGW identity -> Application Gateway (Contributor)
-output "appgw_contributor_assignment" {
-  description = "Role assignment ID for AppGW Contributor on Application Gateway"
-  value       = azurerm_role_assignment.appgw_contributor.id
+output "aks_appgw_contributor_assignment" {
+  value = azurerm_role_assignment.aks_appgw_contributor.id
 }
