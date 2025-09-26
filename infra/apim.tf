@@ -36,10 +36,25 @@ resource "azurerm_api_management_api" "chatbot_api" {
   protocols           = ["https"]
 
   import {
-    content_format = "swagger-link-json"
-    content_value  = "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.json"
+    content_format = "openapi-link"
+    content_value  = "https://aoai-candidates-east-us-2.openai.azure.com/openai/docs/openapi.json?api-version=2023-12-01-preview"
   }
 }
+
+#resource "azurerm_api_management_api" "chatbot_api" {
+#  name                = "chatbot-api"
+#  resource_group_name = var.resource_group_name
+#  api_management_name = azurerm_api_management.chatbot_apim.name
+#  revision            = "1"
+#  display_name        = "Chatbot API"
+#  path                = "chat"
+#  protocols           = ["https"]
+
+#  import {
+#    content_format = "openapi-link"
+#    content_value  = "https://aoai-candidates-east-us-2.openai.azure.com/openai/docs/openapi.json?api-version=2023-12-01-preview"
+#  }
+#}
 
 resource "azurerm_api_management_api_policy" "rate_limit_policy" {
   api_name            = azurerm_api_management_api.chatbot_api.name

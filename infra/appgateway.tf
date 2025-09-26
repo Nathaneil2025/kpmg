@@ -110,13 +110,14 @@ resource "azurerm_application_gateway" "chatbot_appgw" {
     key_vault_secret_id = azurerm_key_vault_certificate.appgw_cert.secret_id
   }
 
-  request_routing_rule {
-    name                       = "rule-http"
-    rule_type                  = "Basic"
-    http_listener_name         = "listener-http"
-    backend_address_pool_name  = "default-backend-pool"
-    backend_http_settings_name = "default-backend-httpsetting"
-  }
+request_routing_rule {
+  name                       = "rule-http"
+  rule_type                  = "Basic"
+  http_listener_name         = "listener-http"
+  backend_address_pool_name  = "default-backend-pool"
+  backend_http_settings_name = "default-backend-httpsetting"
+  priority                   = 100
+}
 
   # redirect all HTTP → HTTPS
   redirect_configuration {
