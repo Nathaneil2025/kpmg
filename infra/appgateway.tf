@@ -53,6 +53,10 @@ resource "azurerm_application_gateway" "chatbot_appgw" {
     tier     = "WAF_v2"
     capacity = 2
   }
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.appgw_identity.id]
+  }
 
   gateway_ip_configuration {
     name      = "appgw-ipcfg"
