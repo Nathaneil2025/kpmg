@@ -27,11 +27,6 @@ resource "azurerm_user_assigned_identity" "workload_identity" {
 # -----------------------------
 # ACR Pull Role Assignment for AKS kubelet identity
 # -----------------------------
-resource "azurerm_role_assignment" "aks_acr_pull" {
-  principal_id         = azurerm_kubernetes_cluster.chatbot_aks.kubelet_identity[0].object_id
-  role_definition_name = "AcrPull"
-  scope                = data.azurerm_container_registry.chatbot_acr.id
-}
 
 # -----------------------------
 # Role Assignment: allow your human admin user to be AKS Cluster Admin

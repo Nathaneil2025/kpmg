@@ -54,11 +54,6 @@ resource "azurerm_application_gateway" "chatbot_appgw" {
     capacity = 2
   }
 
-  autoscale_configuration {
-    min_capacity = 2
-    max_capacity = 10
-  }
-
   gateway_ip_configuration {
     name      = "appgw-ipcfg"
     subnet_id = azurerm_subnet.aks_subnet.id
