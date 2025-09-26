@@ -1,37 +1,42 @@
-name: infra + dbp + helm
+name: infra + build + push + helm
 
 on:
   workflow_dispatch:   # ✅ manual trigger only
 
 jobs:
-  infra:
+  deploy:
     runs-on: ubuntu-latest
 
+    env:
+      RESOURCE_GROUP: platform_candidate_2
+      CLUSTER_NAME: chatbot-aks
+      ACR_NAME: acrcandidates   # short ACR name (login server = acrcandidates.azurecr.io)
+
     steps:
+      # ---------------------
+      # Checkout code
+      # ---------------------
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      # ---------------------
+      # Azure Login
+      # ---------------------
       - name: Azure Login (Service Principal with Secret)
         uses: azure/login@v2
         with:
           auth-type: SERVICE_PRINCIPAL
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      # ---------------------
+      # Terraform infra
+      # ---------------------
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
       - name: Terraform Init
         working-directory: infra
         run: terraform init
-        env:
-          ARM_CLIENT_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }}
-          ARM_CLIENT_SECRET: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
-          ARM_TENANT_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
-          ARM_SUBSCRIPTION_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).subscriptionId }}
-
-      - name: Terraform Plan
-        working-directory: infra
-        run: terraform plan
         env:
           ARM_CLIENT_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientId }}
           ARM_CLIENT_SECRET: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
@@ -46,3 +51,56 @@ jobs:
           ARM_CLIENT_SECRET: ${{ fromJson(secrets.AZURE_CREDENTIALS).clientSecret }}
           ARM_TENANT_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
           ARM_SUBSCRIPTION_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).subscriptionId }}
+
+      # ---------------------
+      # Build & Push Image with sequential tags
+      # ---------------------
+      - name: Get next image tag
+        id: get_tag
+        run: |
+          # List existing tags from ACR repo (if empty, start at ver1)
+          TAGS=$(az acr repository show-tags \
+            --name ${{ env.ACR_NAME }} \
+            --repository chatbot-app \
+            --output tsv 2>/dev/null || echo "")
+
+          if [ -z "$TAGS" ]; then
+            NEXT_TAG="ver1"
+          else
+            LAST_NUM=$(echo "$TAGS" | grep -Eo 'ver[0-9]+' | sed 's/ver//' | sort -n | tail -1)
+            NEXT_NUM=$((LAST_NUM + 1))
+            NEXT_TAG="ver${NEXT_NUM}"
+          fi
+
+          echo "NEXT_TAG=$NEXT_TAG" >> $GITHUB_ENV
+          echo "Using tag: $NEXT_TAG"
+
+      - name: Azure Container Registry Login
+        uses: azure/docker-login@v2
+        with:
+          login-server: ${{ env.ACR_NAME }}.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and Push Docker image
+        run: |
+          IMAGE=${{ env.ACR_NAME }}.azurecr.io/chatbot-app:${{ env.NEXT_TAG }}
+          docker build -t $IMAGE .
+          docker push $IMAGE
+
+      # ---------------------
+      # Helm Deploy
+      # ---------------------
+      - name: Get AKS Credentials
+        run: |
+          az aks get-credentials \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.CLUSTER_NAME }} \
+            --overwrite-existing
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install chatbot ./helm \
+            --set image.repository=${{ env.ACR_NAME }}.azurecr.io/chatbot-app \
+            --set image.tag=${{ env.NEXT_TAG }} \
+            --set image.pullPolicy=Always

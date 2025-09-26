@@ -21,12 +21,27 @@ spec:
           ports:
             - containerPort: {{ .Values.service.port }}
           env:
-            {{- range $key, $value := .Values.app.env }}
-            - name: {{ $key }}
-              value: "{{ $value }}"
-            {{- end }}
+            - name: AOAI_ENDPOINT
+              value: {{ .Values.app.env.AOAI_ENDPOINT | quote }}
+            - name: AOAI_DEPLOYMENT
+              value: {{ .Values.app.env.AOAI_DEPLOYMENT | quote }}
+            - name: AOAI_API_KEY
+              value: {{ .Values.app.env.AOAI_API_KEY | quote }}
+            - name: USE_REDIS
+              value: {{ .Values.app.env.USE_REDIS | quote }}
+            - name: REDIS_URL
+              value: {{ .Values.app.env.REDIS_URL | quote }}
+            - name: USE_COSMOS
+              value: {{ .Values.app.env.USE_COSMOS | quote }}
+            - name: COSMOS_FILE
+              value: {{ .Values.app.env.COSMOS_FILE | quote }}
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            limits:
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
           readinessProbe:
