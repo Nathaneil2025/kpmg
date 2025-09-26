@@ -10,7 +10,7 @@ jobs:
     env:
       RESOURCE_GROUP: platform_candidate_2
       CLUSTER_NAME: chatbot-aks
-      ACR_NAME: myacrtask   # short ACR name (login server = acrcandidates.azurecr.io)
+      ACR_NAME: myacrtask   # short ACR name (login server = myacrtask.azurecr.io)
 
     steps:
       # ---------------------
@@ -52,8 +52,8 @@ jobs:
           ARM_TENANT_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
           ARM_SUBSCRIPTION_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).subscriptionId }}
 
-            # ---------------------
-      # Build & Push Image with sequential tags + latest
+      # ---------------------
+      # Build & Push Image (sequential + latest)
       # ---------------------
       - name: Get next image tag
         id: get_tag
@@ -74,15 +74,17 @@ jobs:
           echo "NEXT_TAG=$NEXT_TAG" >> $GITHUB_ENV
           echo "Using tag: $NEXT_TAG"
 
+      - name: ACR Login (via SP)
+        run: |
+          az acr login --name ${{ env.ACR_NAME }}
+
       - name: Build and Push Docker image
         run: |
           IMAGE=${{ env.ACR_NAME }}.azurecr.io/chatbot-app
-          # tag as sequential (verX) AND latest
+          echo "Building and pushing $IMAGE:${{ env.NEXT_TAG}} and :latest"
           docker build -t $IMAGE:${{ env.NEXT_TAG }} -t $IMAGE:latest .
           docker push $IMAGE:${{ env.NEXT_TAG }}
           docker push $IMAGE:latest
-
-      
 
       # ---------------------
       # Helm Deploy
@@ -98,5 +100,5 @@ jobs:
         run: |
           helm upgrade --install chatbot ./helm \
             --set image.repository=${{ env.ACR_NAME }}.azurecr.io/chatbot-app \
-            --set image.tag=${{ env.NEXT_TAG }} \
+            --set image.tag=latest \
             --set image.pullPolicy=Always
