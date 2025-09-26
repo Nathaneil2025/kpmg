@@ -2,10 +2,9 @@
 # Image
 # -------------------------
 image:
-  repository: acrcandidates.azurecr.io/chatbot-app   # replaced at runtime in GitHub workflow
-  tag: "1"                                          # workflow will bump version
-  pullPolicy: IfNotPresent
-
+  repository: myacrtask.azurecr.io/chatbot-app
+  tag: latest
+  pullPolicy: Always
 # -------------------------
 # App settings
 # -------------------------

@@ -1,3 +1,7 @@
+# -----------------------------
+# AKS Outputs
+# -----------------------------
+
 # AKS Cluster Name
 output "aks_name" {
   value = azurerm_kubernetes_cluster.chatbot_aks.name
@@ -24,7 +28,11 @@ output "aks_oidc_issuer_url" {
   value = azurerm_kubernetes_cluster.chatbot_aks.oidc_issuer_url
 }
 
-# ACR Login Server (now points to acrcandidates in ai-candidates)
+# -----------------------------
+# ACR Outputs
+# -----------------------------
+
+# ACR Login Server (points to myacrtask in platform_candidate_2)
 output "acr_login_server" {
   value = data.azurerm_container_registry.chatbot_acr.login_server
 }
