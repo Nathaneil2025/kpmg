@@ -3,7 +3,7 @@
 # -------------------------
 image:
   repository: acrcandidates.azurecr.io/chatbot-app   # replaced at runtime in GitHub workflow
-  tag: "1"                                                # workflow will bump version
+  tag: "1"                                          # workflow will bump version
   pullPolicy: IfNotPresent
 
 # -------------------------
@@ -31,27 +31,18 @@ service:
 
 # -------------------------
 # Ingress (App Gateway Ingress Controller)
-
+# -------------------------
 ingress:
   enabled: true
   className: azure-application-gateway   # ✅ modern way
-  annotations: {}                        # ✅ leave empty
+  annotations: {}                        # ✅ leave empty to avoid conflicts
   hosts:
-    - host: chatbot.kpmg.local
-      paths:
-        - path: /
-          pathType: Prefix
-  tls: []
-  enabled: true
-  className: azure-application-gateway
-  annotations:
-    kubernetes.io/ingress.class: azure/application-gateway
-  hosts:
-    - host: chatbot.kpmg.local   # placeholder; workflow can override with Front Door or custom domain
+    - host: chatbot.kpmg.local           # placeholder; workflow can override
       paths:
         - path: /
           pathType: Prefix
   tls: []   # leave empty → AGIC can handle cert if we bring one later
+
 # -------------------------
 # Resources
 # -------------------------
