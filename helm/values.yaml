@@ -34,6 +34,15 @@ service:
 
 ingress:
   enabled: true
+  className: azure-application-gateway   # ✅ modern way
+  annotations: {}                        # ✅ leave empty
+  hosts:
+    - host: chatbot.kpmg.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  enabled: true
   className: azure-application-gateway
   annotations:
     kubernetes.io/ingress.class: azure/application-gateway
