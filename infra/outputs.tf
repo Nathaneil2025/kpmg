@@ -68,3 +68,26 @@ output "appgw_identity_client_id" {
 output "appgw_identity_principal_id" {
   value = azurerm_user_assigned_identity.appgw_identity.principal_id
 }
+
+
+# -----------------------------
+# Role Assignment Outputs
+# -----------------------------
+
+# AppGW identity -> Key Vault (for TLS certs)
+output "appgw_kv_role_assignment" {
+  description = "Role assignment ID for AppGW Key Vault Secrets User"
+  value       = azurerm_role_assignment.appgw_kv_secrets_user.id
+}
+
+# AppGW identity -> Resource Group (Reader)
+output "appgw_rg_reader_assignment" {
+  description = "Role assignment ID for AppGW Reader on RG"
+  value       = azurerm_role_assignment.appgw_rg_reader.id
+}
+
+# AppGW identity -> Application Gateway (Contributor)
+output "appgw_contributor_assignment" {
+  description = "Role assignment ID for AppGW Contributor on Application Gateway"
+  value       = azurerm_role_assignment.appgw_contributor.id
+}

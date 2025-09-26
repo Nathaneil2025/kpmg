@@ -74,3 +74,24 @@ resource "azurerm_role_assignment" "appgw_kv_secrets_user" {
 
   depends_on = [azurerm_key_vault.chatbot_kv]
 }
+
+# -----------------------------
+# SAFE: Lookup the RG (instead of azurerm_resource_group.main)
+# -----------------------------
+data "azurerm_resource_group" "chatbot_rg" {
+  name = var.resource_group_name
+}
+
+# Allow AGIC identity to read the App Gateway's resource group
+resource "azurerm_role_assignment" "appgw_rg_reader" {
+  principal_id         = azurerm_user_assigned_identity.appgw_identity.principal_id
+  role_definition_name = "Reader"
+  scope                = data.azurerm_resource_group.chatbot_rg.id
+}
+
+# Allow AGIC identity full control of the App Gateway
+resource "azurerm_role_assignment" "appgw_contributor" {
+  principal_id         = azurerm_user_assigned_identity.appgw_identity.principal_id
+  role_definition_name = "Contributor"
+  scope                = azurerm_application_gateway.chatbot_appgw.id
+}
