@@ -63,3 +63,14 @@ resource "azurerm_role_assignment" "aks_acr_pull" {
   role_definition_name = "AcrPull"
   scope                = data.azurerm_container_registry.chatbot_acr.id
 }
+
+# -----------------------------
+# Role Assignment: AppGW identity -> Key Vault (TLS cert fetch)
+# -----------------------------
+resource "azurerm_role_assignment" "appgw_kv_secrets_user" {
+  principal_id         = azurerm_user_assigned_identity.appgw_identity.principal_id
+  role_definition_name = "Key Vault Secrets User"
+  scope                = azurerm_key_vault.chatbot_kv.id
+
+  depends_on = [azurerm_key_vault.chatbot_kv]
+}

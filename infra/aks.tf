@@ -28,12 +28,17 @@ resource "azurerm_kubernetes_cluster" "chatbot_aks" {
   }
 
   role_based_access_control_enabled = true
+  oidc_issuer_enabled               = true
+  workload_identity_enabled         = true
 
-  oidc_issuer_enabled       = true
-  workload_identity_enabled = true
+  # -----------------------------
+  # Application Gateway Ingress Controller (AGIC)
+  # -----------------------------
+  ingress_application_gateway {
+    gateway_id = azurerm_application_gateway.chatbot_appgw.id
+  }
 
   tags = {
     environment = "chatbot"
   }
 }
-

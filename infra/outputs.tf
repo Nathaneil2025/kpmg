@@ -36,3 +36,35 @@ output "aks_oidc_issuer_url" {
 output "acr_login_server" {
   value = data.azurerm_container_registry.chatbot_acr.login_server
 }
+
+
+# -----------------------------
+# Identity Outputs
+# -----------------------------
+
+# AKS Control Plane Identity (User Assigned)
+output "aks_identity_client_id" {
+  value = azurerm_user_assigned_identity.aks_identity.client_id
+}
+
+output "aks_identity_principal_id" {
+  value = azurerm_user_assigned_identity.aks_identity.principal_id
+}
+
+# Workload Identity (used by pods for KV, Redis, Cosmos)
+output "workload_identity_client_id" {
+  value = azurerm_user_assigned_identity.workload_identity.client_id
+}
+
+output "workload_identity_principal_id" {
+  value = azurerm_user_assigned_identity.workload_identity.principal_id
+}
+
+# Application Gateway Identity (for cert fetch from Key Vault)
+output "appgw_identity_client_id" {
+  value = azurerm_user_assigned_identity.appgw_identity.client_id
+}
+
+output "appgw_identity_principal_id" {
+  value = azurerm_user_assigned_identity.appgw_identity.principal_id
+}
