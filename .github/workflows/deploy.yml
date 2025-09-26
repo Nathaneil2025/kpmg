@@ -52,7 +52,7 @@ jobs:
           ARM_TENANT_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
           ARM_SUBSCRIPTION_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).subscriptionId }}
 
-      # ---------------------
+            # ---------------------
       # Build & Push Image with sequential tags
       # ---------------------
       - name: Get next image tag
@@ -75,18 +75,18 @@ jobs:
           echo "NEXT_TAG=$NEXT_TAG" >> $GITHUB_ENV
           echo "Using tag: $NEXT_TAG"
 
-      - name: Azure Container Registry Login
-        uses: azure/docker-login@v2
-        with:
-          login-server: ${{ env.ACR_NAME }}.azurecr.io
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
+      - name: Azure Container Registry Login (via SP)
+        run: |
+          az acr login --name ${{ env.ACR_NAME }}
 
       - name: Build and Push Docker image
         run: |
           IMAGE=${{ env.ACR_NAME }}.azurecr.io/chatbot-app:${{ env.NEXT_TAG }}
+          echo "Building and pushing $IMAGE"
           docker build -t $IMAGE .
           docker push $IMAGE
+
+      
 
       # ---------------------
       # Helm Deploy
