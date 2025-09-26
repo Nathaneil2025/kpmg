@@ -97,3 +97,11 @@ resource "azurerm_subnet_route_table_association" "apim_subnet_rt" {
   subnet_id      = azurerm_subnet.apim_subnet.id
   route_table_id = azurerm_route_table.apim_rt.id
 }
+
+
+resource "azurerm_subnet" "appgw_subnet" {
+  name                 = "appgw-subnet"
+  resource_group_name  = var.resource_group_name
+  virtual_network_name = azurerm_virtual_network.main_vnet.name
+  address_prefixes     = ["192.168.3.0/24"]
+}

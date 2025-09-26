@@ -58,10 +58,10 @@ resource "azurerm_application_gateway" "chatbot_appgw" {
     identity_ids = [azurerm_user_assigned_identity.appgw_identity.id]
   }
 
-  gateway_ip_configuration {
-    name      = "appgw-ipcfg"
-    subnet_id = azurerm_subnet.aks_subnet.id
-  }
+ gateway_ip_configuration {
+  name      = "appgw-ipcfg"
+  subnet_id = azurerm_subnet.appgw_subnet.id
+}
 
   frontend_ip_configuration {
     name                 = "appgw-feip"
@@ -142,3 +142,4 @@ request_routing_rule {
     environment = "chatbot"
   }
 }
+
