@@ -35,7 +35,7 @@ service:
 ingress:
   enabled: true
   className: azure-application-gateway
-  annotations:
+  annotations: {}
     kubernetes.io/ingress.class: azure/application-gateway
   hosts:
     - host: chatbot.kpmg.local   # placeholder; workflow can override with Front Door or custom domain
