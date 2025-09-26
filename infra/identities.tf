@@ -11,6 +11,20 @@ resource "azurerm_user_assigned_identity" "aks_identity" {
   }
 }
 
+# Allow AKS identity to read the App Gateway's resource group
+resource "azurerm_role_assignment" "aks_rg_reader" {
+  principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
+  role_definition_name = "Reader"
+  scope                = data.azurerm_resource_group.chatbot_rg.id
+}
+
+# Allow AKS identity full control of the App Gateway
+resource "azurerm_role_assignment" "aks_appgw_contributor" {
+  principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
+  role_definition_name = "Contributor"
+  scope                = azurerm_application_gateway.chatbot_appgw.id
+}
+
 # -----------------------------
 # Managed identity for workloads (pods needing access to KV, Cosmos, Redis)
 # -----------------------------
@@ -26,6 +40,7 @@ resource "azurerm_user_assigned_identity" "workload_identity" {
 
 # -----------------------------
 # Managed identity for Application Gateway
+# (used only for Key Vault secret/cert access)
 # -----------------------------
 resource "azurerm_user_assigned_identity" "appgw_identity" {
   name                = "chatbot-appgw-identity"
@@ -35,6 +50,15 @@ resource "azurerm_user_assigned_identity" "appgw_identity" {
   tags = {
     environment = "chatbot"
   }
+}
+
+# Allow AppGW identity -> Key Vault (TLS cert fetch)
+resource "azurerm_role_assignment" "appgw_kv_secrets_user" {
+  principal_id         = azurerm_user_assigned_identity.appgw_identity.principal_id
+  role_definition_name = "Key Vault Secrets User"
+  scope                = azurerm_key_vault.chatbot_kv.id
+
+  depends_on = [azurerm_key_vault.chatbot_kv]
 }
 
 # -----------------------------
@@ -65,33 +89,8 @@ resource "azurerm_role_assignment" "aks_acr_pull" {
 }
 
 # -----------------------------
-# Role Assignment: AppGW identity -> Key Vault (TLS cert fetch)
-# -----------------------------
-resource "azurerm_role_assignment" "appgw_kv_secrets_user" {
-  principal_id         = azurerm_user_assigned_identity.appgw_identity.principal_id
-  role_definition_name = "Key Vault Secrets User"
-  scope                = azurerm_key_vault.chatbot_kv.id
-
-  depends_on = [azurerm_key_vault.chatbot_kv]
-}
-
-# -----------------------------
-# SAFE: Lookup the RG (instead of azurerm_resource_group.main)
+# SAFE: Lookup the RG
 # -----------------------------
 data "azurerm_resource_group" "chatbot_rg" {
   name = var.resource_group_name
-}
-
-# Allow AGIC identity to read the App Gateway's resource group
-resource "azurerm_role_assignment" "appgw_rg_reader" {
-  principal_id         = azurerm_user_assigned_identity.appgw_identity.principal_id
-  role_definition_name = "Reader"
-  scope                = data.azurerm_resource_group.chatbot_rg.id
-}
-
-# Allow AGIC identity full control of the App Gateway
-resource "azurerm_role_assignment" "appgw_contributor" {
-  principal_id         = azurerm_user_assigned_identity.appgw_identity.principal_id
-  role_definition_name = "Contributor"
-  scope                = azurerm_application_gateway.chatbot_appgw.id
 }
