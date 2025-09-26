@@ -53,6 +53,16 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).subscriptionId }}
 
       # ---------------------
+      # Get AKS Credentials (needed before kubectl commands)
+      # ---------------------
+      - name: Get AKS Credentials
+        run: |
+          az aks get-credentials \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.CLUSTER_NAME }} \
+            --overwrite-existing
+
+      # ---------------------
       # Step 3: Validate AGIC is running with AKS identity
       # ---------------------
       - name: Validate AGIC Controller
@@ -99,13 +109,6 @@ jobs:
       # ---------------------
       # Helm Deploy
       # ---------------------
-      - name: Get AKS Credentials
-        run: |
-          az aks get-credentials \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --name ${{ env.CLUSTER_NAME }} \
-            --overwrite-existing
-
       - name: Deploy with Helm
         run: |
           helm upgrade --install chatbot ./helm \
