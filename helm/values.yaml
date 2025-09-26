@@ -31,11 +31,11 @@ service:
 
 # -------------------------
 # Ingress (App Gateway Ingress Controller)
-# -------------------------
+
 ingress:
   enabled: true
   className: azure-application-gateway
-  annotations: {}
+  annotations:
     kubernetes.io/ingress.class: azure/application-gateway
   hosts:
     - host: chatbot.kpmg.local   # placeholder; workflow can override with Front Door or custom domain
@@ -43,7 +43,6 @@ ingress:
         - path: /
           pathType: Prefix
   tls: []   # leave empty → AGIC can handle cert if we bring one later
-
 # -------------------------
 # Resources
 # -------------------------

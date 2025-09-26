@@ -10,7 +10,7 @@ jobs:
     env:
       RESOURCE_GROUP: platform_candidate_2
       CLUSTER_NAME: chatbot-aks
-      ACR_NAME: acrcandidates   # short ACR name (login server = acrcandidates.azurecr.io)
+      ACR_NAME: myacrtask   # short ACR name (login server = acrcandidates.azurecr.io)
 
     steps:
       # ---------------------

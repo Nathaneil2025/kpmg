@@ -1,6 +1,7 @@
 # Reference the existing ACR "acrcandidates" in resource group "ai-candidates"
 data "azurerm_container_registry" "chatbot_acr" {
-  name                = "acrcandidates"
-  resource_group_name = "ai-candidates"
+  name                = "myacrtask"
+  resource_group_name = "platform_candidate_2"
   #comment
 }
+
