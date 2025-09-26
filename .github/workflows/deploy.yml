@@ -53,6 +53,16 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).subscriptionId }}
 
       # ---------------------
+      # Step 3: Validate AGIC is running with AKS identity
+      # ---------------------
+      - name: Validate AGIC Controller
+        run: |
+          echo "Checking AGIC pod status..."
+          kubectl get pods -n kube-system -l app=ingress-appgw
+          echo "Checking AGIC logs..."
+          kubectl logs -n kube-system -l app=ingress-appgw --tail=50 || true
+
+      # ---------------------
       # Build & Push Image (sequential + latest)
       # ---------------------
       - name: Get next image tag
