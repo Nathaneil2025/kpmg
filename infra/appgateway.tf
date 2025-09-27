@@ -53,15 +53,16 @@ resource "azurerm_application_gateway" "chatbot_appgw" {
     tier     = "WAF_v2"
     capacity = 2
   }
+  
   identity {
     type         = "UserAssigned"
     identity_ids = [azurerm_user_assigned_identity.appgw_identity.id]
   }
 
- gateway_ip_configuration {
-  name      = "appgw-ipcfg"
-  subnet_id = azurerm_subnet.appgw_subnet.id
-}
+  gateway_ip_configuration {
+    name      = "appgw-ipcfg"
+    subnet_id = azurerm_subnet.appgw_subnet.id
+  }
 
   frontend_ip_configuration {
     name                 = "appgw-feip"
@@ -78,6 +79,7 @@ resource "azurerm_application_gateway" "chatbot_appgw" {
     port = 443
   }
 
+  # Minimal required backend pool and settings - AGIC will manage the real ones
   backend_address_pool {
     name = "default-backend-pool"
   }
@@ -90,42 +92,27 @@ resource "azurerm_application_gateway" "chatbot_appgw" {
     request_timeout       = 30
   }
 
+  # Minimal required listener - AGIC will manage the real ones
   http_listener {
-    name                           = "listener-http"
+    name                           = "default-listener"
     frontend_ip_configuration_name = "appgw-feip"
     frontend_port_name             = "port80"
     protocol                       = "Http"
   }
 
-  http_listener {
-    name                           = "listener-https"
-    frontend_ip_configuration_name = "appgw-feip"
-    frontend_port_name             = "port443"
-    protocol                       = "Https"
-    ssl_certificate_name           = "appgw-cert"
+  # Minimal required routing rule - AGIC will manage the real ones
+  request_routing_rule {
+    name                       = "default-rule"
+    rule_type                  = "Basic"
+    http_listener_name         = "default-listener"
+    backend_address_pool_name  = "default-backend-pool"
+    backend_http_settings_name = "default-backend-httpsetting"
+    priority                   = 1
   }
 
   ssl_certificate {
     name                = "appgw-cert"
     key_vault_secret_id = azurerm_key_vault_certificate.appgw_cert.secret_id
-  }
-
-request_routing_rule {
-  name                       = "rule-http"
-  rule_type                  = "Basic"
-  http_listener_name         = "listener-http"
-  backend_address_pool_name  = "default-backend-pool"
-  backend_http_settings_name = "default-backend-httpsetting"
-  priority                   = 100
-}
-
-  # redirect all HTTP → HTTPS
-  redirect_configuration {
-    name                 = "http-to-https"
-    redirect_type        = "Permanent"
-    include_path         = true
-    include_query_string = true
-    target_listener_name = "listener-https"
   }
 
   waf_configuration {
@@ -142,4 +129,3 @@ request_routing_rule {
     environment = "chatbot"
   }
 }
-
