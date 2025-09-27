@@ -1,4 +1,4 @@
-# API Management Service with VNet Integration
+# API Management Service - Simplified without VNet Integration
 resource "azurerm_api_management" "chatbot_apim" {
   name                = "chatbot-apim-2025"
   location            = var.location
@@ -7,11 +7,11 @@ resource "azurerm_api_management" "chatbot_apim" {
   publisher_email     = "admin@example.com"
   sku_name            = "Developer_1"
 
-  # VNet configuration for proper security
-  virtual_network_type = "External"
-  virtual_network_configuration {
-    subnet_id = azurerm_subnet.apim_subnet.id
-  }
+  # Remove VNet configuration to avoid connectivity issues
+  # virtual_network_type = "External"
+  # virtual_network_configuration {
+  #   subnet_id = azurerm_subnet.apim_subnet.id
+  # }
 
   identity {
     type = "SystemAssigned"
@@ -21,20 +21,21 @@ resource "azurerm_api_management" "chatbot_apim" {
     environment = "chatbot"
   }
 
-  depends_on = [
-    azurerm_subnet_network_security_group_association.apim_assoc,
-    azurerm_subnet_route_table_association.apim_subnet_rt
-  ]
+  # Remove VNet dependencies
+  # depends_on = [
+  #   azurerm_subnet_network_security_group_association.apim_assoc,
+  #   azurerm_subnet_route_table_association.apim_subnet_rt
+  # ]
 }
 
-# Backend Service pointing to Application Gateway PRIVATE IP (VNet communication)
+# Backend Service pointing to Application Gateway PUBLIC IP (since APIM is now external)
 resource "azurerm_api_management_backend" "chatbot_appgw_backend" {
   name                = "chatbot-appgw-backend"
   api_management_name = azurerm_api_management.chatbot_apim.name
   resource_group_name = var.resource_group_name
 
   protocol = "http"
-  url      = "http://192.168.3.10"  # Application Gateway PRIVATE IP for VNet communication
+  url      = "http://${azurerm_public_ip.appgw_public_ip.ip_address}"  # Use Application Gateway PUBLIC IP
 
   depends_on = [
     azurerm_api_management.chatbot_apim,
