@@ -57,11 +57,11 @@ resource "azurerm_key_vault_access_policy" "appgw_kv_policy" {
   object_id    = azurerm_user_assigned_identity.appgw_identity.principal_id
 
   secret_permissions = [
-  "Create",
+  
   "Get", 
   "List",
   "Delete",
-  "Import",
+  
   "Recover"
   ]
 
