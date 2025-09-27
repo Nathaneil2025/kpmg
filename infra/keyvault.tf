@@ -57,13 +57,21 @@ resource "azurerm_key_vault_access_policy" "appgw_kv_policy" {
   object_id    = azurerm_user_assigned_identity.appgw_identity.principal_id
 
   secret_permissions = [
-    "Get",
-    "List",
+  "Create",
+  "Get", 
+  "List",
+  "Delete",
+  "Import",
+  "Recover"
   ]
 
   certificate_permissions = [
-    "Get",
-    "List",
+  "Create",
+  "Get", 
+  "List",
+  "Delete",
+  "Import",
+  "Recover" 
   ]
 }
 
@@ -80,12 +88,15 @@ resource "azurerm_key_vault_access_policy" "cicd_kv_policy" {
     "Get",
     "List",
     "Delete",
-    "Import"
+    "Import",
+    "Recover"
+    
   ]
 
   secret_permissions = [
     "Get",
     "List",
-    "Delete"
+    "Delete",
+    "Recover"
   ]
 }
