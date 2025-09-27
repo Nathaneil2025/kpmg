@@ -5,13 +5,13 @@ image:
   repository: myacrtask.azurecr.io/chatbot-app
   tag: latest
   pullPolicy: Always
+
 # -------------------------
 # App settings
 # -------------------------
 app:
   name: chatbot-service
   replicas: 2
-
   env:
     AOAI_ENDPOINT: ""          # injected from Key Vault or GitHub Secret
     AOAI_DEPLOYMENT: ""        # "
@@ -33,12 +33,22 @@ service:
 # -------------------------
 ingress:
   enabled: true
-  className: azure-application-gateway   # ✅ modern way
-  annotations: {}                        # ✅ leave empty to avoid conflicts
+  className: azure-application-gateway
+  annotations:
+    # REQUIRED: Tell AGIC to manage this Ingress
+    kubernetes.io/ingress.class: azure/application-gateway
+    # REQUIRED: Backend protocol
+    appgw.ingress.kubernetes.io/backend-protocol: http
+    # Use private frontend for internal APIM access
+    appgw.ingress.kubernetes.io/frontend-ip: appgw-feip-private
+    # Request timeout
+    appgw.ingress.kubernetes.io/request-timeout: "30"
   hosts:
-    - host: chatbot.kpmg.local           # placeholder; workflow can override
+    - host: chatbot.kpmg.local
       paths:
         - path: /
+          pathType: Prefix
+        - path: /chat
           pathType: Prefix
   tls: []   # leave empty → AGIC can handle cert if we bring one later
 

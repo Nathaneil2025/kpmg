@@ -1,9 +1,10 @@
-import os, json, time, uuid, asyncio
+import os, json, time, uuid, asyncio, secrets
 from collections import deque, defaultdict
 from typing import Optional, Dict, Any, List
 
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Request, HTTPException, Form, Cookie
+from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 import httpx
 
@@ -22,16 +23,47 @@ AOAI_DEPLOYMENT = os.getenv("AOAI_DEPLOYMENT", "").strip()
 AOAI_API_KEY = os.getenv("AOAI_API_KEY", "").strip()
 
 USE_REDIS = os.getenv("USE_REDIS", "false").lower() == "true"
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+REDIS_URL = os.getenv("REDIS_URL", "rediss://chatbot-redis-2025:6380")
 
 # Cosmos (mocked locally for now)
 USE_COSMOS = os.getenv("USE_COSMOS", "false").lower() == "true"  # when true, you can later swap to real SDK
-COSMOS_FILE = os.getenv("COSMOS_FILE", "./cosmos_mock.json")     # durable local JSON “DB”
+COSMOS_FILE = os.getenv("COSMOS_FILE", "./cosmos_mock.json")     # durable local JSON "DB"
 
 # Limits & timeouts
 AOAI_TIMEOUT_SECS = int(os.getenv("AOAI_TIMEOUT_SECS", "20"))
 REQ_TIMEOUT_SECS = int(os.getenv("REQ_TIMEOUT_SECS", "25"))
 RATE_LIMIT_PER_MIN = int(os.getenv("RATE_LIMIT_PER_MIN", "10"))  # per IP
+
+# ------------------ Authentication ------------------
+# Simple user database (for demo - in production use proper auth)
+USERS = {
+    " plat2@godevsuite249.onmicrosoft.com": "Raxu7689",
+    
+}
+
+# Session store (in production, use Redis or database)
+active_sessions = {}
+
+# Templates setup
+templates = Jinja2Templates(directory="templates")
+
+def verify_credentials(email: str, password: str) -> bool:
+    return USERS.get(email) == password
+
+def create_session_token(email: str) -> str:
+    token = secrets.token_urlsafe(32)
+    active_sessions[token] = {"email": email, "created": now_ms()}
+    return token
+
+def verify_session_token(token: str) -> Optional[str]:
+    session = active_sessions.get(token)
+    if not session:
+        return None
+    # Session expires after 1 hour
+    if now_ms() - session["created"] > 3600000:
+        del active_sessions[token]
+        return None
+    return session["email"]
 
 # ------------------ Models ------------------
 class ChatRequest(BaseModel):
@@ -113,7 +145,7 @@ async def append_to_redis(session_id: str, msg: Dict[str, str]):
     r = await get_redis()
     if not r:
         mem_sessions[session_id].append(msg)
-        # keep at most 10 in mem for “redis layer”
+        # keep at most 10 in mem for "redis layer"
         mem_sessions[session_id] = mem_sessions[session_id][:10]
         return
     await r.rpush(f"sess:{session_id}", json.dumps(msg))
@@ -121,7 +153,7 @@ async def append_to_redis(session_id: str, msg: Dict[str, str]):
     await r.ltrim(f"sess:{session_id}", 0, 9)
 
 def append_to_cosmos_mock(session_id: str, msgs: List[Dict[str, str]]):
-    # stores “beyond 10” messages; simple, predictable, durable locally
+    # stores "beyond 10" messages; simple, predictable, durable locally
     db = load_cosmos_file()
     entry = db.get(session_id, {"beyond10": []})
     entry["beyond10"].extend(msgs)
@@ -176,15 +208,14 @@ async def call_aoai_or_mock(messages: List[Dict[str, str]]) -> (str, str, int):
             # graceful fallback → keep mock
     # fallback mock
     last_user = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
-    context_hint = "I’m a helpful enterprise chatbot. "
+    context_hint = "I'm a helpful enterprise chatbot. "
     reply = (
         f"{context_hint}You said: '{last_user}'. "
-        "Here’s a concise response: I understand your request and will handle it step by step. "
-        "If you have specific data or constraints, provide them and I’ll adapt the plan."
+        "Here's a concise response: I understand your request and will handle it step by step. "
+        "If you have specific data or constraints, provide them and I'll adapt the plan."
     )
     tokens = max(20, len(last_user) // 3)
     return reply, "mock", tokens
-
 
 # ------------------ Middleware ------------------
 @app.middleware("http")
@@ -210,17 +241,60 @@ async def request_timer(request: Request, call_next):
         json_log("request_error", path=str(request.url.path), rid=rid, error=str(e))
         return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
-# ------------------ Routes ------------------
-@app.get("/")
-async def root():
-    return {"message": "Chatbot API is running"}
+# ------------------ Web Frontend Routes ------------------
+@app.get("/", response_class=HTMLResponse)
+async def login_page(request: Request, session_token: str = Cookie(None)):
+    # Check if user is already logged in
+    if session_token and verify_session_token(session_token):
+        return RedirectResponse(url="/chat-ui", status_code=302)
+    
+    return templates.TemplateResponse("login.html", {"request": request})
 
+@app.post("/login")
+async def login(request: Request, email: str = Form(...), password: str = Form(...)):
+    if not verify_credentials(email, password):
+        return templates.TemplateResponse("login.html", {
+            "request": request, 
+            "error": "Invalid email or password"
+        })
+    
+    token = create_session_token(email)
+    response = RedirectResponse(url="/chat-ui", status_code=302)
+    response.set_cookie(key="session_token", value=token, httponly=True, max_age=3600)
+    return response
+
+@app.get("/chat-ui", response_class=HTMLResponse)
+async def chat_interface(request: Request, session_token: str = Cookie(None)):
+    email = verify_session_token(session_token) if session_token else None
+    if not email:
+        return RedirectResponse(url="/", status_code=302)
+    
+    return templates.TemplateResponse("chat.html", {
+        "request": request, 
+        "user_email": email
+    })
+
+@app.post("/logout")
+async def logout(session_token: str = Cookie(None)):
+    if session_token and session_token in active_sessions:
+        del active_sessions[session_token]
+    
+    response = RedirectResponse(url="/", status_code=302)
+    response.delete_cookie(key="session_token")
+    return response
+
+# ------------------ API Routes ------------------
 @app.get("/healthz")
 async def healthz():
     return {"status": "ok", "service": APP_NAME, "version": VERSION}
 
-@app.post("/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest, request: Request):
+@app.post("/api/chat", response_model=ChatResponse)
+async def api_chat(req: ChatRequest, request: Request, session_token: str = Cookie(None)):
+    # Verify session for web UI
+    email = verify_session_token(session_token) if session_token else None
+    if not email:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
     rid = request.state.rid
     if not req.message.strip():
         raise HTTPException(status_code=400, detail="message is empty")
@@ -243,6 +317,31 @@ async def chat(req: ChatRequest, request: Request):
     reply, source, tokens = await call_aoai_or_mock(messages)
 
     # Save assistant reply (also follows 10/Rest policy)
+    await add_message(req.session_id, role="assistant", content=reply)
+
+    json_log("chat_reply", rid=rid, session=req.session_id, source=source, tokens=tokens, user=email)
+    return ChatResponse(session_id=req.session_id, reply=reply, tokens_used=tokens, source=source)
+
+# Legacy API endpoint (for backward compatibility)
+@app.post("/chat", response_model=ChatResponse)
+async def chat(req: ChatRequest, request: Request):
+    # This endpoint maintains the original functionality for API-only access
+    rid = request.state.rid
+    if not req.message.strip():
+        raise HTTPException(status_code=400, detail="message is empty")
+
+    system_prompt = (
+        "You are a helpful enterprise chatbot. Be concise, factual, and professional. "
+        "Use clear English. If information is missing, ask for the minimal clarification."
+    )
+
+    history = await full_history(req.session_id)
+    messages = [{"role": "system", "content": system_prompt}] + history + [
+        {"role": "user", "content": req.message}
+    ]
+
+    await add_message(req.session_id, role="user", content=req.message)
+    reply, source, tokens = await call_aoai_or_mock(messages)
     await add_message(req.session_id, role="assistant", content=reply)
 
     json_log("chat_reply", rid=rid, session=req.session_id, source=source, tokens=tokens)
