@@ -76,6 +76,7 @@ resource "azurerm_key_vault_access_policy" "cicd_kv_policy" {
   object_id = "4e4f585b-62da-4b84-88cd-8e247f841622" # GitHub Actions SP objectId
 
   certificate_permissions = [
+    "Create",
     "Get",
     "List",
     "Delete",
