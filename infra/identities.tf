@@ -107,6 +107,11 @@ data "azurerm_resource_group" "chatbot_rg" {
   name = var.resource_group_name
 }
 
+resource "azurerm_role_assignment" "agic_managed_identity_operator" {
+  principal_id         = data.azurerm_kubernetes_cluster.chatbot_aks_data.ingress_application_gateway[0].ingress_application_gateway_identity[0].object_id
+  role_definition_name = "Managed Identity Operator"
+  scope                = azurerm_user_assigned_identity.appgw_identity.id
+}
 
 
 #unused
