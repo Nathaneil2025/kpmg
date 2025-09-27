@@ -17,6 +17,12 @@ resource "azurerm_role_assignment" "agic_pip_network_contributor" {
   scope                = azurerm_public_ip.appgw_public_ip.id
 }
 
+resource "azurerm_role_assignment" "agic_subnet_join" {
+  principal_id         = data.azurerm_kubernetes_cluster.chatbot_aks_data.ingress_application_gateway[0].ingress_application_gateway_identity[0].object_id
+  role_definition_name = "Network Contributor"
+  scope                = azurerm_subnet.appgw_subnet.id
+}
+
 # Get the auto-created AGIC identity after AKS is created
 data "azurerm_kubernetes_cluster" "chatbot_aks_data" {
   name                = azurerm_kubernetes_cluster.chatbot_aks.name
