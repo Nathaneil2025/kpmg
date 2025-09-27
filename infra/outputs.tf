@@ -69,6 +69,10 @@ output "appgw_identity_principal_id" {
   value = azurerm_user_assigned_identity.appgw_identity.principal_id
 }
 
+# AGIC Identity (auto-created by Azure)
+output "agic_identity_object_id" {
+  value = data.azurerm_kubernetes_cluster.chatbot_aks_data.ingress_application_gateway[0].ingress_application_gateway_identity[0].object_id
+}
 
 # -----------------------------
 # Role Assignment Outputs
@@ -80,10 +84,15 @@ output "appgw_kv_role_assignment" {
   value       = azurerm_role_assignment.appgw_kv_secrets_user.id
 }
 
-output "aks_rg_reader_assignment" {
-  value = azurerm_role_assignment.aks_rg_reader.id
+# AGIC role assignments (updated to use correct resource names)
+output "agic_rg_reader_assignment" {
+  value = azurerm_role_assignment.agic_rg_reader.id
 }
 
-output "aks_appgw_contributor_assignment" {
-  value = azurerm_role_assignment.aks_appgw_contributor.id
+output "agic_appgw_contributor_assignment" {
+  value = azurerm_role_assignment.agic_appgw_contributor.id
+}
+
+output "agic_pip_network_contributor_assignment" {
+  value = azurerm_role_assignment.agic_pip_network_contributor.id
 }
