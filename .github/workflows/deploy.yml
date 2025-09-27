@@ -48,7 +48,7 @@ jobs:
 
       # Build & Deploy Frontend Static Web App
       - name: Build Frontend
-        working-directory: frontend
+        working-directory: infra/frontend
         run: |
           npm ci
           npm run build
