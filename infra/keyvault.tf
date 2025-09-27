@@ -68,24 +68,23 @@ resource "azurerm_key_vault_access_policy" "appgw_kv_policy" {
 }
 
 
-
-resource "azurerm_key_vault_access_policy" "github_kv_policy" {
+# Give GitHub Actions SP permissions on Key Vault for Terraform operations
+resource "azurerm_key_vault_access_policy" "cicd_kv_policy" {
   key_vault_id = azurerm_key_vault.chatbot_kv.id
 
   tenant_id = data.azurerm_client_config.current.tenant_id
   object_id = "4e4f585b-62da-4b84-88cd-8e247f841622" # GitHub Actions SP objectId
 
-  secret_permissions = [
-    "Get",
-    "List",
-  ]
-
   certificate_permissions = [
     "Get",
     "List",
-    "Create",
-    "Import",
+    "Delete",
+    "Import"
+  ]
+
+  secret_permissions = [
+    "Get",
+    "List",
+    "Delete"
   ]
 }
-
-#
