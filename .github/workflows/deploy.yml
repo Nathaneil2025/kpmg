@@ -1,7 +1,7 @@
 name: infra + build + push + helm
 
 on:
-  workflow_dispatch:   # ✅ manual trigger only
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -10,27 +10,21 @@ jobs:
     env:
       RESOURCE_GROUP: platform_candidate_2
       CLUSTER_NAME: chatbot-aks
-      ACR_NAME: myacrtask   # short ACR name (login server = myacrtask.azurecr.io)
+      ACR_NAME: myacrtask
 
     steps:
-      # ---------------------
       # Checkout code
-      # ---------------------
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # ---------------------
       # Azure Login
-      # ---------------------
       - name: Azure Login (Service Principal with Secret)
         uses: azure/login@v2
         with:
           auth-type: SERVICE_PRINCIPAL
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # ---------------------
       # Terraform infra
-      # ---------------------
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -52,9 +46,21 @@ jobs:
           ARM_TENANT_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).tenantId }}
           ARM_SUBSCRIPTION_ID: ${{ fromJson(secrets.AZURE_CREDENTIALS).subscriptionId }}
 
-      # ---------------------
-      # Get AKS Credentials (needed before kubectl commands)
-      # ---------------------
+      # Build & Deploy Frontend Static Web App
+      - name: Build Frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Deploy Frontend to Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: "upload"
+
+      # Get AKS Credentials
       - name: Get AKS Credentials
         run: |
           az aks get-credentials \
@@ -62,9 +68,7 @@ jobs:
             --name ${{ env.CLUSTER_NAME }} \
             --overwrite-existing
 
-      # ---------------------
-      # Step 3: Validate AGIC is running with AKS identity
-      # ---------------------
+      # Validate AGIC Controller
       - name: Validate AGIC Controller
         run: |
           echo "Checking AGIC pod status..."
@@ -72,9 +76,7 @@ jobs:
           echo "Checking AGIC logs..."
           kubectl logs -n kube-system -l app=ingress-appgw --tail=50 || true
 
-      # ---------------------
-      # Build & Push Image (sequential + latest)
-      # ---------------------
+      # Build & Push Docker Image
       - name: Get next image tag
         id: get_tag
         run: |
@@ -82,7 +84,6 @@ jobs:
             --name ${{ env.ACR_NAME }} \
             --repository chatbot-app \
             --output tsv 2>/dev/null || echo "")
-
           if [ -z "$TAGS" ]; then
             NEXT_TAG="ver1"
           else
@@ -90,7 +91,6 @@ jobs:
             NEXT_NUM=$((LAST_NUM + 1))
             NEXT_TAG="ver${NEXT_NUM}"
           fi
-
           echo "NEXT_TAG=$NEXT_TAG" >> $GITHUB_ENV
           echo "Using tag: $NEXT_TAG"
 
@@ -101,14 +101,11 @@ jobs:
       - name: Build and Push Docker image
         run: |
           IMAGE=${{ env.ACR_NAME }}.azurecr.io/chatbot-app
-          echo "Building and pushing $IMAGE:${{ env.NEXT_TAG}} and :latest"
           docker build -t $IMAGE:${{ env.NEXT_TAG }} -t $IMAGE:latest .
           docker push $IMAGE:${{ env.NEXT_TAG }}
           docker push $IMAGE:latest
 
-      # ---------------------
       # Helm Deploy
-      # ---------------------
       - name: Deploy with Helm
         run: |
           helm upgrade --install chatbot ./helm \
