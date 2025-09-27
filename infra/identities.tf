@@ -11,17 +11,29 @@ resource "azurerm_user_assigned_identity" "aks_identity" {
   }
 }
 
-# Allow AKS identity to read the App Gateway's resource group
-resource "azurerm_role_assignment" "aks_rg_reader" {
-  principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
+resource "azurerm_role_assignment" "agic_pip_network_contributor" {
+  principal_id         = data.azurerm_kubernetes_cluster.chatbot_aks_data.ingress_application_gateway[0].ingress_application_gateway_identity[0].object_id
+  role_definition_name = "Network Contributor"
+  scope                = azurerm_public_ip.appgw_public_ip.id
+}
+
+# Get the auto-created AGIC identity after AKS is created
+data "azurerm_kubernetes_cluster" "chatbot_aks_data" {
+  name                = azurerm_kubernetes_cluster.chatbot_aks.name
+  resource_group_name = azurerm_kubernetes_cluster.chatbot_aks.resource_group_name
+  depends_on         = [azurerm_kubernetes_cluster.chatbot_aks]
+}
+
+# Assign permissions to the AGIC identity (not your AKS identity)
+resource "azurerm_role_assignment" "agic_rg_reader" {
+  principal_id         = data.azurerm_kubernetes_cluster.chatbot_aks_data.ingress_application_gateway[0].ingress_application_gateway_identity[0].object_id
   role_definition_name = "Reader"
   scope                = data.azurerm_resource_group.chatbot_rg.id
 }
 
-# Allow AKS identity full control of the App Gateway
-resource "azurerm_role_assignment" "aks_appgw_contributor" {
-  principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
-  role_definition_name = "Contributor"
+resource "azurerm_role_assignment" "agic_appgw_contributor" {
+  principal_id         = data.azurerm_kubernetes_cluster.chatbot_aks_data.ingress_application_gateway[0].ingress_application_gateway_identity[0].object_id
+  role_definition_name = "Contributor"  
   scope                = azurerm_application_gateway.chatbot_appgw.id
 }
 
@@ -94,3 +106,28 @@ resource "azurerm_role_assignment" "aks_acr_pull" {
 data "azurerm_resource_group" "chatbot_rg" {
   name = var.resource_group_name
 }
+
+
+
+#unused
+
+# Allow AKS identity to manage the Application Gateway's public IP
+#resource "azurerm_role_assignment" "aks_pip_network_contributor" {
+#  principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
+#  role_definition_name = "Network Contributor"
+#  scope                = azurerm_public_ip.appgw_public_ip.id
+#}
+
+# Allow AKS identity to read the App Gateway's resource group
+#resource "azurerm_role_assignment" "aks_rg_reader" {
+#  principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
+#  role_definition_name = "Reader"
+#  scope                = data.azurerm_resource_group.chatbot_rg.id
+#}
+
+# Allow AKS identity full control of the App Gateway
+#resource "azurerm_role_assignment" "aks_appgw_contributor" {
+#  principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
+#  role_definition_name = "Contributor"
+#  scope                = azurerm_application_gateway.chatbot_appgw.id
+#}

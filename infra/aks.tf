@@ -38,6 +38,11 @@ resource "azurerm_kubernetes_cluster" "chatbot_aks" {
     gateway_id = azurerm_application_gateway.chatbot_appgw.id
   }
 
+  # -----------------------------
+  # Ensure AGIC only starts after roles are in place
+  # -----------------------------
+
+
   tags = {
     environment = "chatbot"
   }
