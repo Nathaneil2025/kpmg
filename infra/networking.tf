@@ -167,32 +167,31 @@ resource "azurerm_network_security_rule" "deny_internet_to_apim" {
   network_security_group_name = azurerm_network_security_group.apim_nsg.name
 }
 
-# Allow all outbound TCP
-resource "azurerm_network_security_rule" "allow_outbound_tcp" {
-  name                        = "Allow-Outbound-TCP"
+# POLICY COMPLIANT: Specific outbound rules instead of broad allow-all
+resource "azurerm_network_security_rule" "apim_outbound_https" {
+  name                        = "APIM-Outbound-HTTPS"
   priority                    = 100
   direction                   = "Outbound"
   access                      = "Allow"
   protocol                    = "Tcp"
   source_port_range           = "*"
-  destination_port_range      = "*"
-  source_address_prefix       = "*"
-  destination_address_prefix  = "*"
+  destination_port_range      = "443"
+  source_address_prefix       = "VirtualNetwork"
+  destination_address_prefix  = "Internet"
   resource_group_name         = var.resource_group_name
   network_security_group_name = azurerm_network_security_group.apim_nsg.name
 }
 
-# Allow all outbound UDP
-resource "azurerm_network_security_rule" "allow_outbound_udp" {
-  name                        = "Allow-Outbound-UDP"
+resource "azurerm_network_security_rule" "apim_outbound_storage" {
+  name                        = "APIM-Outbound-Storage"
   priority                    = 110
   direction                   = "Outbound"
   access                      = "Allow"
-  protocol                    = "Udp"
+  protocol                    = "Tcp"
   source_port_range           = "*"
-  destination_port_range      = "*"
-  source_address_prefix       = "*"
-  destination_address_prefix  = "*"
+  destination_port_range      = "443"
+  source_address_prefix       = "VirtualNetwork"
+  destination_address_prefix  = "Storage"
   resource_group_name         = var.resource_group_name
   network_security_group_name = azurerm_network_security_group.apim_nsg.name
 }
