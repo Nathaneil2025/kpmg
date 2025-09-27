@@ -61,7 +61,7 @@ resource "azurerm_key_vault_access_policy" "appgw_kv_policy" {
   "Get", 
   "List",
   "Delete",
-  
+  "Purge",
   "Recover"
   ]
 
@@ -76,7 +76,6 @@ resource "azurerm_key_vault_access_policy" "appgw_kv_policy" {
 }
 
 
-# Give GitHub Actions SP permissions on Key Vault for Terraform operations
 resource "azurerm_key_vault_access_policy" "cicd_kv_policy" {
   key_vault_id = azurerm_key_vault.chatbot_kv.id
 
@@ -88,15 +87,16 @@ resource "azurerm_key_vault_access_policy" "cicd_kv_policy" {
     "Get",
     "List",
     "Delete",
-    "Import",
-    "Recover"
-    
+    "Import",    # Add this missing permission
+    "Recover",
+    "Purge" 
   ]
 
   secret_permissions = [
     "Get",
     "List",
     "Delete",
-    "Recover"
+    "Recover",
+    "Purge" 
   ]
 }

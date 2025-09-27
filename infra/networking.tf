@@ -29,8 +29,6 @@ resource "azurerm_subnet" "apim_subnet" {
   address_prefixes     = ["192.168.1.0/24"]
 }
 
-
-
 resource "azurerm_subnet" "data_subnet" {
   name                 = "data-subnet"
   resource_group_name  = var.resource_group_name
@@ -44,7 +42,6 @@ resource "azurerm_subnet" "appgw_subnet" {
   virtual_network_name = azurerm_virtual_network.main_vnet.name
   address_prefixes     = ["192.168.3.0/24"]
 }
-
 
 # ============================
 # Network Security Groups
@@ -60,6 +57,21 @@ resource "azurerm_network_security_group" "appgw_nsg" {
     environment = "chatbot"
   }
 }
+
+# API Management NSG
+resource "azurerm_network_security_group" "apim_nsg" {
+  name                = "apim-nsg"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+
+  tags = {
+    environment = "chatbot"
+  }
+}
+
+# ============================
+# Application Gateway NSG Rules
+# ============================
 
 # Allow API Management to Application Gateway (Internal communication)
 resource "azurerm_network_security_rule" "allow_apim_to_appgw" {
@@ -106,58 +118,104 @@ resource "azurerm_network_security_rule" "allow_appgw_infrastructure" {
   network_security_group_name = azurerm_network_security_group.appgw_nsg.name
 }
 
+# ============================
+# API Management NSG Rules
+# ============================
+
+# Allow Front Door to APIM
+resource "azurerm_network_security_rule" "allow_frontdoor_to_apim" {
+  name                        = "Allow-FrontDoor-to-APIM"
+  priority                    = 100
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_ranges     = ["80", "443"]
+  source_address_prefix       = "AzureFrontDoor.Backend"
+  destination_address_prefix  = "192.168.1.0/24"
+  resource_group_name         = var.resource_group_name
+  network_security_group_name = azurerm_network_security_group.apim_nsg.name
+}
+
+# Allow API Management management traffic
+resource "azurerm_network_security_rule" "allow_apim_management" {
+  name                        = "Allow-APIM-Management"
+  priority                    = 110
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_range      = "3443"
+  source_address_prefix       = "ApiManagement"
+  destination_address_prefix  = "VirtualNetwork"
+  resource_group_name         = var.resource_group_name
+  network_security_group_name = azurerm_network_security_group.apim_nsg.name
+}
+
+# Deny Internet to APIM (except Front Door)
+resource "azurerm_network_security_rule" "deny_internet_to_apim" {
+  name                        = "Deny-Internet-to-APIM"
+  priority                    = 200
+  direction                   = "Inbound"
+  access                      = "Deny"
+  protocol                    = "*"
+  source_port_range           = "*"
+  destination_port_range      = "*"
+  source_address_prefix       = "Internet"
+  destination_address_prefix  = "192.168.1.0/24"
+  resource_group_name         = var.resource_group_name
+  network_security_group_name = azurerm_network_security_group.apim_nsg.name
+}
+
+# Allow all outbound TCP
+resource "azurerm_network_security_rule" "allow_outbound_tcp" {
+  name                        = "Allow-Outbound-TCP"
+  priority                    = 100
+  direction                   = "Outbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_range      = "*"
+  source_address_prefix       = "*"
+  destination_address_prefix  = "*"
+  resource_group_name         = var.resource_group_name
+  network_security_group_name = azurerm_network_security_group.apim_nsg.name
+}
+
+# Allow all outbound UDP
+resource "azurerm_network_security_rule" "allow_outbound_udp" {
+  name                        = "Allow-Outbound-UDP"
+  priority                    = 110
+  direction                   = "Outbound"
+  access                      = "Allow"
+  protocol                    = "Udp"
+  source_port_range           = "*"
+  destination_port_range      = "*"
+  source_address_prefix       = "*"
+  destination_address_prefix  = "*"
+  resource_group_name         = var.resource_group_name
+  network_security_group_name = azurerm_network_security_group.apim_nsg.name
+}
+
+# ============================
+# NSG Associations
+# ============================
+
 # Associate NSG with Application Gateway subnet
 resource "azurerm_subnet_network_security_group_association" "appgw_nsg_association" {
   subnet_id                 = azurerm_subnet.appgw_subnet.id
   network_security_group_id = azurerm_network_security_group.appgw_nsg.id
 }
 
-#=========================================
-
-# ============================
-# Network Security Group (APIM)
-# ============================
-resource "azurerm_network_security_group" "apim_nsg" {
-  name                = "apim-nsg"
-  location            = var.location
-  resource_group_name = var.resource_group_name
-
-  security_rule {
-    name                       = "AllowClientInbound"
-    priority                   = 100
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_address_prefix      = "AzureFrontDoor.Backend"
-    destination_address_prefix = "VirtualNetwork"
-    destination_port_ranges    = ["80", "443"]
-    source_port_range          = "*"
-  }
-
-  security_rule {
-    name                       = "AllowMgmtInbound"
-    priority                   = 110
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_address_prefix      = "ApiManagement"
-    destination_address_prefix = "VirtualNetwork"
-    destination_port_ranges    = ["3443"]
-    source_port_range          = "*"
-  }
-
-  tags = {
-    environment = "chatbot"
-  }
-}
-
-# ============================
-# Associations - APIM
-# ============================
+# Associate NSG with API Management subnet
 resource "azurerm_subnet_network_security_group_association" "apim_assoc" {
   subnet_id                 = azurerm_subnet.apim_subnet.id
   network_security_group_id = azurerm_network_security_group.apim_nsg.id
 }
+
+# ============================
+# Route Tables
+# ============================
 
 resource "azurerm_route_table" "apim_rt" {
   name                = "apim-rt"

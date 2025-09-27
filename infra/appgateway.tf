@@ -10,39 +10,7 @@ resource "azurerm_public_ip" "appgw_public_ip" {
   }
 }
 
-# SSL certificate stored in Key Vault (placeholder for now)
-resource "azurerm_key_vault_certificate" "appgw_cert" {
-  name         = "chatbot-appgw-cert"
-  key_vault_id = azurerm_key_vault.chatbot_kv.id
-
-  certificate_policy {
-    issuer_parameters {
-      name = "Self"
-    }
-
-    key_properties {
-      exportable = true
-      key_size   = 2048
-      key_type   = "RSA"
-      reuse_key  = true
-    }
-
-    secret_properties {
-      content_type = "application/x-pkcs12"
-    }
-
-    x509_certificate_properties {
-      subject            = "CN=chatbot-appgw"
-      validity_in_months = 12
-      key_usage = [
-        "digitalSignature",
-        "keyEncipherment"
-      ]
-      extended_key_usage = ["1.3.6.1.5.5.7.3.1"] # TLS server auth
-    }
-  }
-}
-
+# SIMPLIFIED Application Gateway - Let AGIC manage most configuration
 resource "azurerm_application_gateway" "chatbot_appgw" {
   name                = "chatbot-appgw"
   location            = var.location
@@ -64,8 +32,17 @@ resource "azurerm_application_gateway" "chatbot_appgw" {
     subnet_id = azurerm_subnet.appgw_subnet.id
   }
 
+  # PRIVATE Frontend IP (for internal VNet access from API Management)
   frontend_ip_configuration {
-    name                 = "appgw-feip"
+    name                          = "appgw-feip-private"
+    subnet_id                     = azurerm_subnet.appgw_subnet.id
+    private_ip_address            = "192.168.3.10"
+    private_ip_address_allocation = "Static"
+  }
+
+  # PUBLIC Frontend IP (required for WAF_v2)
+  frontend_ip_configuration {
+    name                 = "appgw-feip-public"
     public_ip_address_id = azurerm_public_ip.appgw_public_ip.id
   }
 
@@ -79,7 +56,7 @@ resource "azurerm_application_gateway" "chatbot_appgw" {
     port = 443
   }
 
-  # Minimal required backend pool and settings - AGIC will manage the real ones
+  # MINIMAL required configuration - AGIC will manage the rest
   backend_address_pool {
     name = "default-backend-pool"
   }
@@ -92,15 +69,13 @@ resource "azurerm_application_gateway" "chatbot_appgw" {
     request_timeout       = 30
   }
 
-  # Minimal required listener - AGIC will manage the real ones
   http_listener {
     name                           = "default-listener"
-    frontend_ip_configuration_name = "appgw-feip"
+    frontend_ip_configuration_name = "appgw-feip-private"
     frontend_port_name             = "port80"
     protocol                       = "Http"
   }
 
-  # Minimal required routing rule - AGIC will manage the real ones
   request_routing_rule {
     name                       = "default-rule"
     rule_type                  = "Basic"
@@ -108,11 +83,6 @@ resource "azurerm_application_gateway" "chatbot_appgw" {
     backend_address_pool_name  = "default-backend-pool"
     backend_http_settings_name = "default-backend-httpsetting"
     priority                   = 1
-  }
-
-  ssl_certificate {
-    name                = "appgw-cert"
-    key_vault_secret_id = azurerm_key_vault_certificate.appgw_cert.secret_id
   }
 
   waf_configuration {
@@ -127,5 +97,18 @@ resource "azurerm_application_gateway" "chatbot_appgw" {
 
   tags = {
     environment = "chatbot"
+  }
+
+  lifecycle {
+    # Ignore changes that AGIC will manage
+    ignore_changes = [
+      backend_address_pool,
+      backend_http_settings,
+      http_listener,
+      request_routing_rule,
+      probe,
+      redirect_configuration,
+      url_path_map
+    ]
   }
 }

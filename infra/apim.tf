@@ -1,4 +1,4 @@
-# API Management Service (unchanged)
+# API Management Service
 resource "azurerm_api_management" "chatbot_apim" {
   name                = "chatbot-apim-2025"
   location            = var.location
@@ -92,7 +92,7 @@ resource "azurerm_api_management_api_operation" "chat_post" {
   depends_on = [azurerm_api_management_api.chatbot_api]
 }
 
-# Updated Policy - Routes to Application Gateway Backend
+# Basic Policy - Routes to Application Gateway Backend
 resource "azurerm_api_management_api_policy" "chatbot_routing_policy" {
   api_name            = azurerm_api_management_api.chatbot_api.name
   api_management_name = azurerm_api_management.chatbot_apim.name
