@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chatbot</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; }
+    #chat { max-width: 600px; margin: auto; }
+    #messages { border: 1px solid #ccc; padding: 1rem; height: 300px; overflow-y: auto; }
+    .msg { margin: 0.5rem 0; }
+    .user { color: blue; }
+    .bot { color: green; }
+    #input { width: 80%; padding: 0.5rem; }
+    #send { padding: 0.5rem 1rem; }
+  </style>
+</head>
+<body>
+  <div id="chat">
+    <h1>Chat with Bot</h1>
+    <div id="messages"></div>
+    <input id="input" placeholder="Type your message…" />
+    <button id="send">Send</button>
+  </div>
+
+  <script>
+    const sendBtn = document.getElementById('send');
+    const inputEl = document.getElementById('input');
+    const messagesEl = document.getElementById('messages');
+    const apiUrl = `${location.origin}/chat`;  // Front Door → APIM → /chat
+
+    function appendMessage(text, cls) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      div.className = `msg ${cls}`;
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    sendBtn.addEventListener('click', async () => {
+      const msg = inputEl.value.trim();
+      if (!msg) return;
+      appendMessage(`You: ${msg}`, 'user');
+      inputEl.value = '';
+      try {
+        const resp = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: 'default', message: msg })
+        });
+        const json = await resp.json();
+        appendMessage(`Bot: ${json.reply || JSON.stringify(json)}`, 'bot');
+      } catch (err) {
+        appendMessage(`Error: ${err.message}`, 'bot');
+      }
+    });
+
+    inputEl.addEventListener('keypress', e => {
+      if (e.key === 'Enter') sendBtn.click();
+    });
+  </script>
+</body>
+</html>
