@@ -32,12 +32,12 @@ COSMOS_FILE = os.getenv("COSMOS_FILE", "./cosmos_mock.json")     # durable local
 # Limits & timeouts
 AOAI_TIMEOUT_SECS = int(os.getenv("AOAI_TIMEOUT_SECS", "20"))
 REQ_TIMEOUT_SECS = int(os.getenv("REQ_TIMEOUT_SECS", "25"))
-RATE_LIMIT_PER_MIN = int(os.getenv("RATE_LIMIT_PER_MIN", "10"))  # per IP
+RATE_LIMIT_PER_MIN = int(os.getenv("RATE_LIMIT_PER_MIN", "60"))  # per IP
 
 # ------------------ Authentication ------------------
 # Simple user database (for demo - in production use proper auth)
 USERS = {
-    "plat2@godevsuite249.onmicrosoft.com": "Raxu76899",
+    "plat2@godevsuite249.onmicrosoft.com": "Raxu7689",
     
 }
 
