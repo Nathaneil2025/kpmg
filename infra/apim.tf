@@ -38,7 +38,7 @@ resource "azurerm_api_management_api" "chatbot_api" {
   api_management_name = azurerm_api_management.chatbot_apim.name
   revision            = "1"
   display_name        = "Chatbot API"
-  path                = ""
+  path                = "chat"  # Changed from "" to "chat" to match your APIM portal configuration
   protocols           = ["https"]
 
   depends_on = [azurerm_api_management.chatbot_apim]
@@ -82,7 +82,7 @@ resource "azurerm_api_management_api_operation" "chat_post" {
   depends_on = [azurerm_api_management_api.chatbot_api]
 }
 
-# Policy - Routes to Application Gateway Backend
+# FIXED Policy - Routes to Application Gateway Backend WITHOUT rewriting URI
 resource "azurerm_api_management_api_policy" "chatbot_routing_policy" {
   api_name            = azurerm_api_management_api.chatbot_api.name
   api_management_name = azurerm_api_management.chatbot_apim.name
@@ -93,7 +93,8 @@ resource "azurerm_api_management_api_policy" "chatbot_routing_policy" {
   <inbound>
     <rate-limit calls="10" renewal-period="60" />
     <set-backend-service backend-id="chatbot-appgw-backend" />
-    <rewrite-uri template="/" copy-unmatched-params="true" />
+    <!-- REMOVED: <rewrite-uri template="/" copy-unmatched-params="true" /> -->
+    <!-- This was stripping the /chat path that Application Gateway needs -->
     <set-header name="Host" exists-action="override">
       <value>chatbot.kpmg.local</value>
     </set-header>
