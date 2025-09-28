@@ -38,7 +38,7 @@ resource "azurerm_api_management_api" "chatbot_api" {
   api_management_name = azurerm_api_management.chatbot_apim.name
   revision            = "1"
   display_name        = "Chatbot API"
-  path                = "chat"
+  path                = ""
   protocols           = ["https"]
 
   depends_on = [azurerm_api_management.chatbot_apim]
