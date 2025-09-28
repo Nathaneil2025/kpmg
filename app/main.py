@@ -37,7 +37,7 @@ RATE_LIMIT_PER_MIN = int(os.getenv("RATE_LIMIT_PER_MIN", "10"))  # per IP
 # ------------------ Authentication ------------------
 # Simple user database (for demo - in production use proper auth)
 USERS = {
-    "plat2@godevsuite249.onmicrosoft.com": "Raxu7689",
+    "plat2@godevsuite249.onmicrosoft.com": "Raxu76899",
     
 }
 
