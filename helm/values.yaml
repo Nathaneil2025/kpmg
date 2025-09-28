@@ -39,7 +39,7 @@ ingress:
     # REQUIRED: Backend protocol
     appgw.ingress.kubernetes.io/backend-protocol: http
     # Use private frontend for internal APIM access
-    appgw.ingress.kubernetes.io/frontend-ip: appgw-feip-private
+    appgw.ingress.kubernetes.io/frontend-ip: appgw-feip-public
     # Request timeout
     appgw.ingress.kubernetes.io/request-timeout: "30"
   hosts:
