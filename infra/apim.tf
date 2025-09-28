@@ -23,7 +23,7 @@ resource "azurerm_api_management_backend" "chatbot_appgw_backend" {
   resource_group_name = var.resource_group_name
 
   protocol = "http"
-  url      = "http://${azurerm_public_ip.appgw_public_ip.ip_address}"
+  url      = "http://128.24.101.81"
 
   depends_on = [
     azurerm_api_management.chatbot_apim,
