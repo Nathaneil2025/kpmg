@@ -17,7 +17,7 @@ app:
     AOAI_DEPLOYMENT: ""        # "
     AOAI_API_KEY: ""           # "
     USE_REDIS: "true"
-    REDIS_URL: "rediss://chatbot-redis-2025:6380"
+    REDIS_URL: "rediss://default:faMynu7Ptht8bIffKkpdc1C1W6upVCTSYAzCaGEup9k=@chatbot-redis-2025.redis.cache.windows.net:6380"
     USE_COSMOS: "true"
     COSMOS_FILE: "/data/cosmos_mock.json"   # only fallback; real cosmos wired later
 
@@ -43,7 +43,7 @@ ingress:
     # Request timeout
     appgw.ingress.kubernetes.io/request-timeout: "30"
   hosts:
-    - host: chatbot.kpmg.local
+    - host: 
       paths:
         - path: /
           pathType: Prefix
